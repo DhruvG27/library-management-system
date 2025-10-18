@@ -5,7 +5,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 final class H2 {
-  private static final String URL = "jdbc:h2:file:./libdb;MODE=MySQL;AUTO_SERVER=TRUE";
+  private static final String URL = "jdbc:h2:mem:libdb;DB_CLOSE_DELAY=-1;MODE=MySQL";
   private static final String User = "sa";
   private static final String Password = "";
 

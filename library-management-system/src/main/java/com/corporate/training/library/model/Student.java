@@ -27,13 +27,41 @@ public class Student {
     public Student(String studentId, String firstName, String lastName, String email, String department) {
         // TODO: Implement constructor with validation
         // - Student ID should not be null or empty
+        if (studentId == null || studentId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Student ID cannot be null or empty");
+        } else {
+            this.studentId = studentId;
+        }
         // - First name should not be null or empty
+        if (firstName == null || firstName.trim().isEmpty()) {
+            throw new IllegalArgumentException("First name cannot be null or empty");
+        } else {
+            this.firstName = firstName;
+        }
         // - Last name should not be null or empty
+        if (lastName == null || lastName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Last name cannot be null or empty");
+        } else {
+            this.lastName = lastName;
+        }
         // - Email should not be null or empty and should be valid format
+        if(email == null || email.trim().isEmpty() || !email.contains("@")) {
+            throw new IllegalArgumentException("Email cannot be null or empty and must be valid");
+        } else {
+            this.email = email;
+        }
         // - Department should not be null or empty
+        if (department == null || department.trim().isEmpty()) {
+            throw new IllegalArgumentException("Department cannot be null or empty");
+        } else {
+            this.department = department;
+        }
         // - Max books allowed should be set to 5 by default
+        this.maxBooksAllowed = 5;
         // - Current books borrowed should be set to 0
+        this.currentBooksBorrowed = 0;
         // - isActive should be set to true
+        this.isActive = true;
     }
 
     // Getters and Setters
@@ -130,45 +158,72 @@ public class Student {
     // Business methods
     public String getFullName() {
         // TODO: Implement - return concatenated first name and last name
-        return "";
+        return (firstName == null ? "" : firstName) + " " + (lastName == null ? "" : lastName);
     }
 
     public boolean canBorrowMoreBooks() {
         // TODO: Implement - return true if student is active and can borrow more books
-        return false;
+        return isActive && (currentBooksBorrowed < maxBooksAllowed);
     }
 
     public void borrowBook() {
         // TODO: Implement - increment current books borrowed if student can borrow more
         // Throw appropriate exception if cannot borrow more books
+        if(!isActive) {
+            throw new IllegalStateException("Inactive student cannot borrow books");
+        }
+        if(currentBooksBorrowed >= maxBooksAllowed) {
+            throw new IllegalStateException("Student has reached the maximum limit of borrowed books");
+        }
+        currentBooksBorrowed++;
     }
 
     public void returnBook() {
         // TODO: Implement - decrement current books borrowed if student has borrowed books
         // Throw appropriate exception if invalid operation
+        if(currentBooksBorrowed <= 0) {
+            throw new IllegalStateException("Student has no borrowed books to return");
+        }
+        currentBooksBorrowed--;
     }
 
     public int getRemainingBookLimit() {
         // TODO: Implement - return number of books student can still borrow
-        return 0;
+        return Math.max(0, maxBooksAllowed - currentBooksBorrowed);
     }
 
     @Override
     public boolean equals(Object o) {
         // TODO: Implement proper equals method
         // Two students are equal if they have the same student ID
-        return false;
+        if (this == o) {
+            return true;
+        }
+        if (! (o instanceof Student)) {
+            return false;
+        }
+        Student that = (Student) o;
+        return Objects.equals(this.studentId, that.getStudentId());
     }
 
     @Override
     public int hashCode() {
         // TODO: Implement proper hashCode method
-        return 0;
+        return Objects.hash(studentId);
     }
 
     @Override
     public String toString() {
         // TODO: Implement meaningful toString method
-        return "";
+        return "Student{" +
+          "studentId='" + studentId + '\'' +
+          ", firstName='" + firstName + '\'' +
+          ", lastName='" + lastName + '\'' +
+          ", email='" + email + '\'' +
+          ", department='" + department + '\'' +
+          ", isActive=" + isActive +
+          ", currentBooksBorrowed=" + currentBooksBorrowed +
+          ", maxBooksAllowed=" + maxBooksAllowed +
+          '}';
     }
 }
