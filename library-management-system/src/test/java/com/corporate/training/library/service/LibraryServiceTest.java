@@ -53,7 +53,9 @@ class LibraryServiceTest {
         @DisplayName("Should add book successfully")
         void shouldAddBookSuccessfully() {
             // TODO: Test adding a book
+            Book book1 = new Book("978-3315", "Java", "Jagga", "IT", 3);
             // - Create a valid book
+            libraryService.addBook(book1);
             // - Add book using service
             // - Verify book is added to database
             // - Verify book can be retrieved

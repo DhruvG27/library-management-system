@@ -1,0 +1,29 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------< com.corporate.training:library-management-system >----------
+[INFO] Building Library Management System 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ library-management-system ---
+[INFO] skip non existing resourceDirectory C:\Users\dhruv\Desktop\JavaPractice\Project\library-management-system\library-management-system\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ library-management-system ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ library-management-system ---
+[INFO] skip non existing resourceDirectory C:\Users\dhruv\Desktop\JavaPractice\Project\library-management-system\library-management-system\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ library-management-system ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- surefire:3.0.0:test (default-test) @ library-management-system ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] 
+[INFO] Results:
+[INFO] 
+Terminate batch job (Y/N)? 

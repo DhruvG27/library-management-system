@@ -25,13 +25,41 @@ public class Book {
     public Book(String isbn, String title, String author, String category, int totalCopies) {
         // TODO: Implement constructor with validation
         // - ISBN should not be null or empty
+        if (isbn == null || isbn.trim().isEmpty()) {
+            throw new IllegalArgumentException("ISBN cannot be null or empty");
+        } else {
+            this.isbn = isbn;
+        }
         // - Title should not be null or empty
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Title cannot be null or empty");
+        } else {
+            this.title = title;
+        }
         // - Author should not be null or empty
+        if (author == null || author.trim().isEmpty()) {
+            throw new IllegalArgumentException("Author cannot be null or empty");
+        } else {
+            this.author = author;
+        }
         // - Category should not be null or empty
+        if (category == null || category.trim().isEmpty()) {
+            throw new IllegalArgumentException("Category cannot be null or empty");
+        } else {
+            this.category = category;
+        }
         // - Total copies should be positive
+        if (totalCopies <= 0) {
+            throw new IllegalArgumentException("Total copies should be positive");
+        } else {
+            this.totalCopies = totalCopies;
+        }
         // - Available copies should be set to total copies initially
+        this.availableCopies = totalCopies;
         // - Published date should be set to current date
+        this.publishedDate = LocalDate.now();
         // - isActive should be set to true
+        this.isActive = true;
     }
 
     // Getters and Setters
@@ -50,6 +78,7 @@ public class Book {
 
     public void setTitle(String title) {
         // TODO: Add validation - Title should not be null or empty
+
         this.title = title;
     }
 

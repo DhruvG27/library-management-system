@@ -6,7 +6,9 @@ com\corporate\training\library\exception\BookNotFoundException.class
 com\corporate\training\library\exception\BookNotAvailableException.class
 com\corporate\training\library\exception\InvalidOperationException.class
 com\corporate\training\library\exception\StudentLimitExceededException.class
+com\corporate\training\library\database\H2ConnectionVerify.class
 com\corporate\training\library\database\InMemoryDatabase.class
+com\corporate\training\library\database\H2.class
 com\corporate\training\library\exception\LibraryException.class
 com\corporate\training\library\model\BorrowRecord.class
 com\corporate\training\library\model\Student.class
