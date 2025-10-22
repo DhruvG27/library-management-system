@@ -140,35 +140,54 @@ public class Book {
     // Business methods
     public boolean isAvailable() {
         // TODO: Implement - return true if book is active and has available copies
-        return false;
+        return isActive && availableCopies > 0;
     }
 
     public void borrowCopy() {
         // TODO: Implement - decrement available copies if book is available
         // Throw appropriate exception if not available
+        if (!isActive) {
+            throw new IllegalStateException("Book is not active");
+        }
+        if (availableCopies <= 0) {
+            throw new IllegalStateException("No available copies to borrow");
+        }
+        availableCopies--;
     }
 
     public void returnCopy() {
         // TODO: Implement - increment available copies if not exceeding total copies
         // Throw appropriate exception if invalid operation
+        if (availableCopies >= totalCopies) {
+            throw new IllegalStateException("All copies are already in the library");
+        }
+        availableCopies++;
     }
 
     @Override
     public boolean equals(Object o) {
         // TODO: Implement proper equals method
         // Two books are equal if they have the same ISBN
-        return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Book book)) {
+            return false;
+        }
+        return Objects.equals(isbn, book.isbn);
     }
 
     @Override
     public int hashCode() {
         // TODO: Implement proper hashCode method
-        return 0;
+        return Objects.hash(isbn);
     }
 
     @Override
     public String toString() {
         // TODO: Implement meaningful toString method
-        return "";
+        return "Book{isbn='" + isbn + "', title='" + title + "', author='" + author +
+          "', category='" + category + "', totalCopies=" + totalCopies +
+          ", availableCopies=" + availableCopies + ", active=" + isActive + "}";
     }
 }

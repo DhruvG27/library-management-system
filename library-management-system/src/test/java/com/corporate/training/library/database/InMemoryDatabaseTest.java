@@ -8,10 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.corporate.training.library.model.Book;
 import com.corporate.training.library.model.BorrowRecord;
 import com.corporate.training.library.model.Student;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -84,10 +81,13 @@ class InMemoryDatabaseTest {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS PUBLIC.STUDENTS (
                   ID VARCHAR(50) PRIMARY KEY,
-                  NAME VARCHAR(255) NOT NULL,
-                  SURNAME VARCHAR(255),
+                  FIRST_NAME VARCHAR(255) NOT NULL,
+                  LAST_NAME VARCHAR(255),
                   EMAIL VARCHAR(255),
                   DEPARTMENT VARCHAR(100),
+                  PHONE_NUMBER VARCHAR(50),
+                  MAX_BOOKS_ALLOWED INT NOT NULL,
+                  CURRENT_BOOKS_BORROWED INT NOT NULL,
                   ACTIVE BOOLEAN NOT NULL
                 )
             """);
@@ -120,6 +120,9 @@ class InMemoryDatabaseTest {
             // TODO: Test singleton pattern
             // - Get multiple instances
             // - Verify they are the same instance
+            InMemoryDatabase instance1 = InMemoryDatabase.getInstance();
+            InMemoryDatabase instance2 = InMemoryDatabase.getInstance();
+            assertThat(instance1).isSameAs(instance2);
         }
 
         @Test
@@ -162,15 +165,30 @@ class InMemoryDatabaseTest {
             // TODO: Test adding null book
             // - Attempt to add null book
             // - Verify appropriate exception is thrown
+            try {
+                database.addBook(null);
+                Assertions.fail("Expected IllegalArgumentException");
+            } catch (IllegalArgumentException expected) {
+                // ok
+            } catch (Exception other) {
+                Assertions.fail("Unexpected exception: " + other);
+            }
         }
 
         @Test
         @DisplayName("Should throw exception when adding duplicate book")
-        void shouldThrowExceptionWhenAddingDuplicateBook() {
+        void shouldThrowExceptionWhenAddingDuplicateBook() throws SQLException {
             // TODO: Test adding duplicate book
             // - Add a book
             // - Attempt to add another book with same ISBN
             // - Verify appropriate exception is thrown
+            database.addBook(testBook);
+            try {
+                database.addBook(new Book(testBook.getIsbn(), "X", "Y", "Z", 1));
+                Assertions.fail("Expected runtime exception for duplicate ISBN");
+            } catch (RuntimeException expected) {
+                assertThat(expected.getMessage()).contains("Failed to add book");
+            }
         }
 
         @Test
@@ -326,6 +344,20 @@ class InMemoryDatabaseTest {
             // - Add student to database
             // - Verify student is added
             // - Verify student can be retrieved
+            Student student = new Student("STU100", "Alice", "Wong", "alice@u.edu", "Physics");
+            student.setPhoneNumber("999-000-1111");
+            student.setMaxBooksAllowed(5);
+            student.setCurrentBooksBorrowed(0);
+            student.setActive(true);
+
+            database.addStudent(student);
+
+            Student studentFromDb = database.getStudent("STU100");
+            assertThat(studentFromDb).isNotNull();
+            assertThat(studentFromDb.getFirstName()).isEqualTo("Alice");
+            assertThat(studentFromDb.getLastName()).isEqualTo("Wong");
+            assertThat(studentFromDb.getDepartment()).isEqualTo("Physics");
+
         }
 
         @Test
@@ -334,7 +366,17 @@ class InMemoryDatabaseTest {
             // TODO: Test adding null student
             // - Attempt to add null student
             // - Verify appropriate exception is thrown
+            try {
+                database.addStudent(null);
+                Assertions.fail("Expected IllegalArgumentException");
+            } catch (IllegalArgumentException expected) {
+                // ok
+            } catch (RuntimeException e) {
+                // also acceptable if your DAO rethrows; but IllegalArgumentException is best
+                assertThat(e.getMessage()).contains("Student or ID");
+            }
         }
+
 
         @Test
         @DisplayName("Should throw exception when adding duplicate student")

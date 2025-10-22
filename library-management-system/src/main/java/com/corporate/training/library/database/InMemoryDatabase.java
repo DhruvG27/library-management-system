@@ -107,7 +107,7 @@ public class InMemoryDatabase {
 
         String sql = """
         SELECT ISBN, TITLE, AUTHOR, CATEGORY, TOTAL_COPIES, AVAILABLE_COPIES, PUBLISHED_DATE, ACTIVE
-        FROM BOOKS WHERE ISBN = ?
+        FROM PUBLIC.BOOKS WHERE ISBN = ?
     """;
 
         try (Connection conn = H2.getConnection();
@@ -124,6 +124,28 @@ public class InMemoryDatabase {
         }
     }
 
+    public Book getBookByTitle(String title) throws SQLException {
+        if (title == null || title.trim().isEmpty()) return null;
+        String sql = """
+        SELECT ISBN, TITLE, AUTHOR, CATEGORY, TOTAL_COPIES, AVAILABLE_COPIES, PUBLISHED_DATE, ACTIVE
+        FROM PUBLIC.BOOKS WHERE TITLE = ?
+        """;
+        try (Connection conn = H2.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, title);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return mapBook(rs);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to get book by title", e);
+        }
+
+
+    }
+
     public List<Book> getAllBooks() {
         // TODO: Implement thread-safe retrieval of all books
         // - Acquire appropriate lock
@@ -132,7 +154,7 @@ public class InMemoryDatabase {
 
         String sql = """
             SELECT ISBN, TITLE, AUTHOR, CATEGORY, TOTAL_COPIES, AVAILABLE_COPIES, PUBLISHED_DATE, ACTIVE
-            FROM BOOKS ORDER BY TITLE""";
+            FROM PUBLIC.BOOKS ORDER BY TITLE""";
 
         try (Connection conn = H2.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -159,14 +181,16 @@ public class InMemoryDatabase {
         }
         String sql = """
             SELECT ISBN, TITLE, AUTHOR, CATEGORY, TOTAL_COPIES, AVAILABLE_COPIES, PUBLISHED_DATE, ACTIVE
-            FROM BOOKS WHERE LOWER(AUTHOR) LIKE LOWER(?) ORDER BY TITLE""";
+            FROM PUBLIC.BOOKS WHERE LOWER(AUTHOR) LIKE LOWER(?) ORDER BY TITLE""";
         try (Connection conn = H2.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, "%" + author + "%");
             try (ResultSet rs = ps.executeQuery()) {
                 List<Book> list = new ArrayList<>();
-                while (rs.next()) list.add(mapBook(rs));
+                while (rs.next()) {
+                    list.add(mapBook(rs));
+                }
                 return list;
             }
         } catch (SQLException e) {
@@ -186,7 +210,7 @@ public class InMemoryDatabase {
         }
         String sql = """
             SELECT ISBN, TITLE, AUTHOR, CATEGORY, TOTAL_COPIES, AVAILABLE_COPIES, PUBLISHED_DATE, ACTIVE
-            FROM BOOKS WHERE LOWER(CATEGORY) LIKE LOWER(?) ORDER BY TITLE""";
+            FROM PUBLIC.BOOKS WHERE LOWER(CATEGORY) LIKE LOWER(?) ORDER BY TITLE""";
         try (Connection conn = H2.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
@@ -218,7 +242,7 @@ public class InMemoryDatabase {
         }
 
         String sql = """
-                UPDATE BOOKS
+                UPDATE PUBLIC.BOOKS
                 SET TITLE=?, AUTHOR=?, CATEGORY=?, TOTAL_COPIES=?, AVAILABLE_COPIES=?, PUBLISHED_DATE=?, ACTIVE=?
                 WHERE ISBN=?
                 """;
@@ -256,7 +280,7 @@ public class InMemoryDatabase {
             return false;
         }
         try (Connection conn = H2.getConnection();
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM BOOKS WHERE ISBN=?")) {
+             PreparedStatement ps = conn.prepareStatement("DELETE FROM PUBLIC.BOOKS WHERE ISBN=?")) {
             ps.setString(1, isbn);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -286,11 +310,15 @@ public class InMemoryDatabase {
         // - Check if student with same ID already exists
         // - Add student to collection
         // - Release lock
-    String sql = """
-        INSERT INTO STUDENTS(ID, FIRST_NAME, LAST_NAME, EMAIL, DEPARTMENT, PHONE_NUMBER, ACTIVE)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """;
+        if (student == null || student.getStudentId() == null || student.getStudentId().trim().isEmpty()) {
+            throw new IllegalArgumentException("Student or Student ID cannot be null or empty");
+        }
 
+        String sql = """
+          INSERT INTO PUBLIC.STUDENTS
+          (ID, FIRST_NAME, LAST_NAME, EMAIL, DEPARTMENT, PHONE_NUMBER, MAX_BOOKS_ALLOWED, CURRENT_BOOKS_BORROWED, ACTIVE)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """;
         try (Connection conn = H2.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
@@ -300,7 +328,9 @@ public class InMemoryDatabase {
             ps.setString(4, student.getEmail());
             ps.setString(5, student.getDepartment());
             ps.setString(6, student.getPhoneNumber());
-            ps.setBoolean(7, student.isActive());
+            ps.setInt(7, student.getMaxBooksAllowed());
+            ps.setInt(8, student.getCurrentBooksBorrowed());
+            ps.setBoolean(9, student.isActive());
 
             ps.executeUpdate();
         } catch (SQLException e) {
@@ -318,8 +348,10 @@ public class InMemoryDatabase {
             return null;
         }
         String sql = """
-          SELECT ID, FIRST_NAME, LAST_NAME, EMAIL, DEPARTMENT, MAX_BOOKS_ALLOWED, CURRENT_BOOKS_BORROWED, ACTIVE
-          FROM STUDENTS WHERE ID = ?""";
+        SELECT ID, FIRST_NAME, LAST_NAME, EMAIL, DEPARTMENT, PHONE_NUMBER,
+               MAX_BOOKS_ALLOWED, CURRENT_BOOKS_BORROWED, ACTIVE
+        FROM PUBLIC.STUDENTS WHERE ID = ?
+        """;
 
         try (Connection conn = H2.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -341,8 +373,10 @@ public class InMemoryDatabase {
         // - Return copy of all students to avoid external modification
         // - Release lock
         String sql = """
-        SELECT ID, FIRST_NAME, LAST_NAME, EMAIL, DEPARTMENT, ACTIVE, MAX_BOOKS_ALLOWED, CURRENT_BOOKS_BORROWED
-        FROM STUDENTS ORDER BY FIRST_NAME, LAST_NAME""";
+        SELECT ID, FIRST_NAME, LAST_NAME, EMAIL, DEPARTMENT, PHONE_NUMBER,
+               MAX_BOOKS_ALLOWED, CURRENT_BOOKS_BORROWED, ACTIVE
+        FROM PUBLIC.STUDENTS ORDER BY FIRST_NAME, LAST_NAME
+        """;
         try (Connection conn = H2.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -368,8 +402,12 @@ public class InMemoryDatabase {
         }
 
         String sql = """
-        SELECT ID, FIRST_NAME, LAST_NAME, EMAIL, DEPARTMENT, ACTIVE, MAX_BOOKS_ALLOWED, CURRENT_BOOKS_BORROWED
-        FROM STUDENTS WHERE LOWER(DEPARTMENT) = LOWER(?) ORDER BY FIRST_NAME, LAST_NAME""";
+        SELECT ID, FIRST_NAME, LAST_NAME, EMAIL, DEPARTMENT, PHONE_NUMBER,
+               MAX_BOOKS_ALLOWED, CURRENT_BOOKS_BORROWED, ACTIVE
+        FROM PUBLIC.STUDENTS
+        WHERE LOWER(DEPARTMENT) LIKE LOWER(?)
+        ORDER BY FIRST_NAME, LAST_NAME
+        """;
 
         try (Connection conn = H2.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -400,7 +438,7 @@ public class InMemoryDatabase {
             return false;
         }
         String sql = """
-                UPDATE STUDENTS
+                UPDATE PUBLIC.STUDENTS
                 SET FIRST_NAME=?, LAST_NAME=?, EMAIL=?, DEPARTMENT=?, PHONE_NUMBER=?, ACTIVE=?, CURRENT_BOOKS_BORROWED=?
                 WHERE ID=?
                 """;
@@ -436,7 +474,7 @@ public class InMemoryDatabase {
             return false;
         }
         try (Connection conn = H2.getConnection();
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM STUDENTS WHERE ID=?")) {
+             PreparedStatement ps = conn.prepareStatement("DELETE FROM PUBLIC.STUDENTS WHERE ID=?")) {
             ps.setString(1, studentId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -452,16 +490,17 @@ public class InMemoryDatabase {
       student.setLastName(rs.getString("LAST_NAME"));
       student.setEmail(rs.getString("EMAIL"));
       student.setDepartment(rs.getString("DEPARTMENT"));
-//      student.setMaxBooksAllowed(rs.getInt("MAX_BOOKS_ALLOWED"));
-//      student.setCurrentBooksBorrowed(rs.getInt("CURRENT_BOOKS_BORROWED"));
+      student.setPhoneNumber(rs.getString("PHONE_NUMBER"));
+      student.setMaxBooksAllowed(rs.getInt("MAX_BOOKS_ALLOWED"));
+      student.setCurrentBooksBorrowed(rs.getInt("CURRENT_BOOKS_BORROWED"));
       student.setActive(rs.getBoolean("ACTIVE"));
       return student;
     }
 
     private boolean unReturnedBorrowedBooksExistForStudent(String studentId) {
         String sql = """
-          SELECT COUNT(*) FROM BORROW_RECORDS
-          WHERE STUDENT_ID = ? AND RETURN_DATE IS NULL""";
+          SELECT COUNT(*) FROM PUBLIC.BORROW_RECORDS
+          WHERE STUDENT_ID = ? AND RETURN_DATETIME IS NULL""";
         try (Connection c = H2.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, studentId);

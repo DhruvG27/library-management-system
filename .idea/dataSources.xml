@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="libdb" uuid="5f2457dc-3513-4733-bd76-45caa10367ee">
+    <data-source source="LOCAL" name="library" uuid="28b1824a-f671-4f2d-ae70-5089f4a82e4a">
       <driver-ref>h2.unified</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.h2.Driver</jdbc-driver>
-      <jdbc-url>jdbc:h2:file:./libdb;MODE=MySQL;AUTO_SERVER=TRUE</jdbc-url>
+      <jdbc-url>jdbc:h2:file:$PROJECT_DIR$/library-management-system/h2/library;AUTO_SERVER=TRUE;MODE=PostgreSQL;DATABASE_TO_UPPER=false</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
   </component>

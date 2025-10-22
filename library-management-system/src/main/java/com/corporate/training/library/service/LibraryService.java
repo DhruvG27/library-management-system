@@ -5,7 +5,9 @@ import com.corporate.training.library.model.Book;
 import com.corporate.training.library.model.BorrowRecord;
 import com.corporate.training.library.model.Student;
 
+import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -34,6 +36,17 @@ public class LibraryService {
         // - Check if book with same ISBN already exists
         // - Add book to database
         // - Handle appropriate exceptions
+        if (book == null) {
+            throw new IllegalArgumentException("Book cannot be null");
+        }
+        try {
+            if (database.getBook(book.getIsbn()) != null) {
+                throw new RuntimeException("Book with ISBN " + book.getIsbn() + " already exists");
+            }
+            database.addBook(book);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to add book: " + e.getMessage(), e);
+        }
     }
     
     public Book getBook(String isbn) {
@@ -41,7 +54,19 @@ public class LibraryService {
         // - Validate ISBN is not null or empty
         // - Retrieve book from database
         // - Handle case when book is not found
-        return null;
+        if (isbn == null || isbn.trim().isEmpty()) {
+            throw new IllegalArgumentException("ISBN cannot be null or empty");
+        }
+        try {
+            Book book = database.getBook(isbn);
+            if (book == null) {
+                throw new RuntimeException("Book with ISBN " + isbn + " not found");
+            }
+            return book;
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to retrieve book due to a database error: " + e.getMessage(), e);
+        }
+//        return null;
     }
     
     public List<Book> searchBooksByTitle(String title) {
@@ -49,7 +74,22 @@ public class LibraryService {
         // - Validate title is not null or empty
         // - Search through all books
         // - Return matching books
-        return null;
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Title cannot be null or empty");
+        }
+
+        String searchTerm = title.toLowerCase();
+        List<Book> match = new ArrayList<>();
+        List<Book> allBooks = database.getAllBooks();
+
+        for (Book book : allBooks) {
+            String bookTitle = book.getTitle();
+            if (bookTitle != null && bookTitle.toLowerCase().contains(searchTerm)) {
+                match.add(book);
+            }
+        }
+        return match;
+//        return null;
     }
     
     public List<Book> searchBooksByAuthor(String author) {
@@ -57,7 +97,21 @@ public class LibraryService {
         // - Validate author is not null or empty
         // - Search through all books
         // - Return matching books
-        return null;
+        if (author == null || author.trim().isEmpty()) {
+            throw new IllegalArgumentException("Author cannot be null or empty");
+        }
+        String searchTerm = author.toLowerCase();
+        List<Book> match = new ArrayList<>();
+        List<Book> allBooks = database.getAllBooks();
+
+        for (Book book : allBooks) {
+            String bookAuthor = book.getAuthor();
+            if (bookAuthor != null && bookAuthor.toLowerCase().contains(searchTerm)) {
+                match.add(book);
+            }
+        }
+        return match;
+//        return null;
     }
     
     public List<Book> getAvailableBooks() {
@@ -65,7 +119,15 @@ public class LibraryService {
         // - Get all books from database
         // - Filter books that are available (active and have available copies)
         // - Return list of available books
-        return null;
+        List <Book> availableBooks = new ArrayList<>();
+        List<Book> allBooks = database.getAllBooks();
+        for (Book book : allBooks) {
+            if (book.isAvailable()) {
+                availableBooks.add(book);
+            }
+        }
+        return availableBooks;
+//        return null;
     }
     
     // Student management operations
@@ -75,6 +137,13 @@ public class LibraryService {
         // - Check if student with same ID already exists
         // - Add student to database
         // - Handle appropriate exceptions
+        if (student == null) {
+            throw new IllegalArgumentException("Student cannot be null");
+        }
+        if (database.getStudent(student.getStudentId()) != null) {
+            throw new RuntimeException("Student with ID " + student.getStudentId() + " already exists");
+        }
+        database.addStudent(student);
     }
     
     public Student getStudent(String studentId) {
@@ -82,7 +151,16 @@ public class LibraryService {
         // - Validate student ID is not null or empty
         // - Retrieve student from database
         // - Handle case when student is not found
-        return null;
+
+        if (studentId == null || studentId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Student ID cannot be null or empty");
+        }
+        Student student = database.getStudent(studentId);
+        if (student == null) {
+            throw new RuntimeException("Student with ID " + studentId + " not found");
+        }
+        return student;
+//        return null;
     }
     
     public List<Student> searchStudentsByName(String name) {
@@ -90,7 +168,29 @@ public class LibraryService {
         // - Validate name is not null or empty
         // - Search through all students
         // - Return matching students
-        return null;
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be null or empty");
+        }
+        String searchTerm = name.toLowerCase();
+        List<Student> match = new ArrayList<>();
+        List<Student> allStudents = database.getAllStudents();
+
+        for (Student student : allStudents) {
+            String firstName = student.getFirstName();
+            String lastName = student.getLastName();
+
+            String fullName = (firstName == null ? "" : firstName) + " " + (lastName == null ? "" : lastName);
+            boolean firstNameMatches = firstName != null && firstName.toLowerCase().contains(searchTerm);
+            boolean lastNameMatches = lastName != null && lastName.toLowerCase().contains(searchTerm);
+            boolean fullNameMatches = fullName.toLowerCase().contains(searchTerm);
+
+            if (firstNameMatches || lastNameMatches || fullNameMatches) {
+                match.add(student);
+            }
+
+        }
+        return match;
+//        return null;
     }
     
     // Borrowing operations (these should be thread-safe)
