@@ -69,6 +69,9 @@ public class Book {
 
     public void setIsbn(String isbn) {
         // TODO: Add validation - ISBN should not be null or empty
+        if (isbn == null || isbn.trim().isEmpty()) {
+            throw new IllegalArgumentException("ISBN cannot be null or empty");
+        }
         this.isbn = isbn;
     }
 
@@ -78,7 +81,9 @@ public class Book {
 
     public void setTitle(String title) {
         // TODO: Add validation - Title should not be null or empty
-
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Title cannot be null or empty");
+        }
         this.title = title;
     }
 
@@ -88,6 +93,9 @@ public class Book {
 
     public void setAuthor(String author) {
         // TODO: Add validation - Author should not be null or empty
+        if (author == null || author.trim().isEmpty()) {
+            throw new IllegalArgumentException("Author cannot be null or empty");
+        }
         this.author = author;
     }
 
@@ -97,6 +105,9 @@ public class Book {
 
     public void setCategory(String category) {
         // TODO: Add validation - Category should not be null or empty
+        if (category == null || category.trim().isEmpty()) {
+            throw new IllegalArgumentException("Category cannot be null or empty");
+        }
         this.category = category;
     }
 
@@ -106,6 +117,12 @@ public class Book {
 
     public void setTotalCopies(int totalCopies) {
         // TODO: Add validation - Total copies should be positive
+        if (totalCopies <= 0) {
+            throw new IllegalArgumentException("Total copies should be positive");
+        }
+        if (this.availableCopies > totalCopies) {
+            throw new IllegalArgumentException("Total copies cannot be less than available copies");
+        }
         this.totalCopies = totalCopies;
     }
 
@@ -116,6 +133,9 @@ public class Book {
     public void setAvailableCopies(int availableCopies) {
         // TODO: Add validation - Available copies should not be negative
         // and should not exceed total copies
+        if (availableCopies < 0 || availableCopies > this.totalCopies) {
+            throw new IllegalArgumentException("Available copies should be between 0 and total copies");
+        }
         this.availableCopies = availableCopies;
     }
 
@@ -126,6 +146,9 @@ public class Book {
     public void setPublishedDate(LocalDate publishedDate) {
         // TODO: Add validation - Published date should not be null
         // and should not be in the future
+        if (publishedDate != null && publishedDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Published date cannot be in the future");
+        }
         this.publishedDate = publishedDate;
     }
 

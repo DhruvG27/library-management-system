@@ -71,7 +71,10 @@ public class Student {
 
     public void setStudentId(String studentId) {
         // TODO: Add validation - Student ID should not be null or empty
-        this.studentId = studentId;
+        if (studentId == null || studentId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Student ID cannot be null or empty");
+        }
+        this.studentId = studentId.trim();
     }
 
     public String getFirstName() {
@@ -80,7 +83,10 @@ public class Student {
 
     public void setFirstName(String firstName) {
         // TODO: Add validation - First name should not be null or empty
-        this.firstName = firstName;
+        if (firstName == null || firstName.trim().isEmpty()) {
+            throw new IllegalArgumentException("First name cannot be null or empty");
+        }
+        this.firstName = firstName.trim();
     }
 
     public String getLastName() {
@@ -89,7 +95,10 @@ public class Student {
 
     public void setLastName(String lastName) {
         // TODO: Add validation - Last name should not be null or empty
-        this.lastName = lastName;
+        if (lastName == null || lastName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Last name cannot be null or empty");
+        }
+        this.lastName = lastName.trim();
     }
 
     public String getEmail() {
@@ -98,7 +107,10 @@ public class Student {
 
     public void setEmail(String email) {
         // TODO: Add validation - Email should not be null or empty and should be valid format
-        this.email = email;
+        if(email == null || email.trim().isEmpty() || !email.contains("@")) {
+            throw new IllegalArgumentException("Email cannot be null or empty and must be valid");
+        }
+        this.email = email.trim();
     }
 
     public String getPhoneNumber() {
@@ -107,6 +119,9 @@ public class Student {
 
     public void setPhoneNumber(String phoneNumber) {
         // TODO: Add validation - Phone number should be valid format (optional field)
+        if (phoneNumber != null && phoneNumber.trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number cannot be empty if provided");
+        }
         this.phoneNumber = phoneNumber;
     }
 
@@ -116,6 +131,9 @@ public class Student {
 
     public void setDateOfBirth(LocalDate dateOfBirth) {
         // TODO: Add validation - Date of birth should not be null and should be in the past
+        if (dateOfBirth == null || dateOfBirth.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Date of birth cannot be null and must be in the past");
+        }
         this.dateOfBirth = dateOfBirth;
     }
 
@@ -125,7 +143,10 @@ public class Student {
 
     public void setDepartment(String department) {
         // TODO: Add validation - Department should not be null or empty
-        this.department = department;
+        if (department == null || department.trim().isEmpty()) {
+            throw new IllegalArgumentException("Department cannot be null or empty");
+        }
+        this.department = department.trim();
     }
 
     public int getMaxBooksAllowed() {
@@ -134,6 +155,12 @@ public class Student {
 
     public void setMaxBooksAllowed(int maxBooksAllowed) {
         // TODO: Add validation - Max books allowed should be positive
+        if (maxBooksAllowed <= 0) {
+            throw new IllegalArgumentException("Max books allowed should be positive");
+        }
+        if (this.currentBooksBorrowed > maxBooksAllowed) {
+            throw new IllegalArguemntException("Max books allowed cannot be less than current books borrowed");
+        }
         this.maxBooksAllowed = maxBooksAllowed;
     }
 

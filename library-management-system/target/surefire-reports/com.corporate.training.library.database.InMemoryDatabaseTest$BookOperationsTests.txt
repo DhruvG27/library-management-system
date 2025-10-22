@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.corporate.training.library.database.InMemoryDatabaseTest$BookOperationsTests
 -------------------------------------------------------------------------------
-Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.289 s - in com.corporate.training.library.database.InMemoryDatabaseTest$BookOperationsTests
+Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.312 s - in com.corporate.training.library.database.InMemoryDatabaseTest$BookOperationsTests
