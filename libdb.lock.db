@@ -1,0 +1,6 @@
+#FileLock
+#Mon Oct 20 10:57:26 UTC 2025
+hostName=192.168.1.238
+id=19a01444c5c56cf4bc18cdf08245ac1473dbb933216
+method=file
+server=192.168.1.238\:14366

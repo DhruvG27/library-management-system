@@ -5,11 +5,7 @@ import com.corporate.training.library.exception.*;
 import com.corporate.training.library.model.Book;
 import com.corporate.training.library.model.BorrowRecord;
 import com.corporate.training.library.model.Student;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -102,6 +98,12 @@ class LibraryServiceTest {
             // - Add multiple books with different titles
             // - Search by partial title
             // - Verify correct books are returned
+            Book test = new Book("978-3315", "Java Programming", "Jagga", "IT", 3);
+            libraryService.addBook(test);
+
+            Book got = libraryService.getBookByTitle("Java Programming");
+            assertNotNull(got);
+            assertEquals("978-3315", got.getIsbn());
         }
 
         @Test
@@ -152,6 +154,16 @@ class LibraryServiceTest {
             // - Add a student
             // - Attempt to add another student with same ID
             // - Verify appropriate exception is thrown
+            Student student1 = new Student("S1", "A", "B", "a@b.com", "CS");
+            libraryService.addStudent(student1);
+            try {
+                database.addStudent(student1);
+                Assertions.fail("Expected RuntimeException for duplicate student");
+            } catch (RuntimeException ex) {
+                String msg = ex.getMessage();
+                assertNotNull(msg);
+                assertTrue(msg.contains("already exists"));
+            }
         }
 
         @Test
@@ -193,7 +205,7 @@ class LibraryServiceTest {
             // TODO: Set up book and student for borrowing tests
             book = new Book("978-0-123456-78-9", "Test Book", "Test Author", "Test Category", 3);
             student = new Student("STU001", "John", "Doe", "john.doe@email.com", "Computer Science");
-            
+
             libraryService.addBook(book);
             libraryService.addStudent(student);
         }

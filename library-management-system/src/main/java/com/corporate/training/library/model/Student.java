@@ -131,7 +131,7 @@ public class Student {
 
     public void setDateOfBirth(LocalDate dateOfBirth) {
         // TODO: Add validation - Date of birth should not be null and should be in the past
-        if (dateOfBirth == null || dateOfBirth.isAfter(LocalDate.now())) {
+        if ((dateOfBirth != null) && !dateOfBirth.isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Date of birth cannot be null and must be in the past");
         }
         this.dateOfBirth = dateOfBirth;
@@ -159,7 +159,7 @@ public class Student {
             throw new IllegalArgumentException("Max books allowed should be positive");
         }
         if (this.currentBooksBorrowed > maxBooksAllowed) {
-            throw new IllegalArguemntException("Max books allowed cannot be less than current books borrowed");
+            throw new IllegalArgumentException("Max books allowed cannot be less than current books borrowed");
         }
         this.maxBooksAllowed = maxBooksAllowed;
     }
@@ -171,6 +171,9 @@ public class Student {
     public void setCurrentBooksBorrowed(int currentBooksBorrowed) {
         // TODO: Add validation - Current books borrowed should not be negative
         // and should not exceed max books allowed
+        if (currentBooksBorrowed < 0 || currentBooksBorrowed > this.maxBooksAllowed) {
+            throw new IllegalArgumentException("Current books borrowed should be between 0 and max books allowed");
+        }
         this.currentBooksBorrowed = currentBooksBorrowed;
     }
 

@@ -121,7 +121,7 @@ public class Book {
             throw new IllegalArgumentException("Total copies should be positive");
         }
         if (this.availableCopies > totalCopies) {
-            throw new IllegalArgumentException("Total copies cannot be less than available copies");
+            throw new IllegalArgumentException("Total copies cannot be set below current available copies");
         }
         this.totalCopies = totalCopies;
     }

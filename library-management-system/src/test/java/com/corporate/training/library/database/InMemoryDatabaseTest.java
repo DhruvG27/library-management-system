@@ -187,7 +187,7 @@ class InMemoryDatabaseTest {
                 database.addBook(new Book(testBook.getIsbn(), "X", "Y", "Z", 1));
                 Assertions.fail("Expected runtime exception for duplicate ISBN");
             } catch (RuntimeException expected) {
-                assertThat(expected.getMessage()).contains("Failed to add book");
+                assertThat(expected.getMessage()).contains("Book with ISBN " +testBook.getIsbn() +" already exists");
             }
         }
 
@@ -370,10 +370,7 @@ class InMemoryDatabaseTest {
                 database.addStudent(null);
                 Assertions.fail("Expected IllegalArgumentException");
             } catch (IllegalArgumentException expected) {
-                // ok
-            } catch (RuntimeException e) {
-                // also acceptable if your DAO rethrows; but IllegalArgumentException is best
-                assertThat(e.getMessage()).contains("Student or ID");
+                assertThat(expected.getMessage()).contains("Student or Student ID cannot be null or empty");
             }
         }
 
@@ -385,6 +382,18 @@ class InMemoryDatabaseTest {
             // - Add a student
             // - Attempt to add another student with same ID
             // - Verify appropriate exception is thrown
+            Student stu = new Student("S1","A","B","a@b.com","CS");
+            database.addStudent(stu);
+            Student stu2 = new Student("S1", "B", "C", "x@y.com", "Math");
+            try {
+                database.addStudent(stu2);
+                Assertions.fail("Expected runtime exception for duplicate ID");
+            } catch (RuntimeException expected) {
+                String msg = expected.getMessage();
+                assertNotNull(msg);
+                assertTrue(msg.contains("Failed to add student as ID already exists"));
+            }
+
         }
 
         @Test

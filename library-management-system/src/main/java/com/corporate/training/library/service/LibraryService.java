@@ -91,6 +91,21 @@ public class LibraryService {
         return match;
 //        return null;
     }
+
+    public Book getBookByTitle(String title) {
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Title cannot be null or empty");
+        }
+        try {
+            Book book = database.getBookByTitle(title);
+            if (book == null) {
+                throw new RuntimeException("Book with title '" + title + "' not found");
+            }
+            return book;
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to retrieve book by title", e);
+        }
+    }
     
     public List<Book> searchBooksByAuthor(String author) {
         // TODO: Implement book search by author (case-insensitive, partial match)
@@ -161,6 +176,13 @@ public class LibraryService {
         }
         return student;
 //        return null;
+    }
+
+    public List<Student> getStudentsByDepartment(String department) {
+        if (department == null || department.trim().isEmpty()) {
+            throw new IllegalArgumentException("Department cannot be null or empty");
+        }
+        return database.getStudentsByDepartment(department);
     }
     
     public List<Student> searchStudentsByName(String name) {

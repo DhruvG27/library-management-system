@@ -74,6 +74,9 @@ public class InMemoryDatabase {
         if (book == null || book.getIsbn() == null || book.getIsbn().trim().isEmpty()) {
             throw new IllegalArgumentException("Book or ISBN cannot be null or empty");
         }
+        if (getBook(book.getIsbn()) != null) {
+            throw new IllegalArgumentException("Book with ISBN " + book.getIsbn() + " already exists");
+        }
 
         String sql = """
         INSERT INTO BOOKS(ISBN, TITLE, AUTHOR, CATEGORY, TOTAL_COPIES, AVAILABLE_COPIES, PUBLISHED_DATE, ACTIVE)
@@ -312,6 +315,14 @@ public class InMemoryDatabase {
         // - Release lock
         if (student == null || student.getStudentId() == null || student.getStudentId().trim().isEmpty()) {
             throw new IllegalArgumentException("Student or Student ID cannot be null or empty");
+        }
+
+//        if (getStudent(student.getStudentId()) != null) {
+//            throw new IllegalArgumentException("Student with ID " + student.getStudentId() + " already exists");
+//        }
+        Student existing = getStudent(student.getStudentId());
+        if (existing != null) {
+            throw new RuntimeException("Failed to add student as ID already exists: " + student.getStudentId());
         }
 
         String sql = """
