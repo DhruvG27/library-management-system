@@ -212,11 +212,10 @@ public class LibraryService {
 
         }
         return match;
-//        return null;
     }
     
     // Borrowing operations (these should be thread-safe)
-    public BorrowRecord borrowBook(String studentId, String bookIsbn) {
+    public BorrowRecord borrowBook(String studentId, String bookIsbn) throws SQLException {
         // TODO: Implement thread-safe book borrowing
         // - Validate student ID and book ISBN are not null or empty
         // - Check if student exists and is active
@@ -228,9 +227,74 @@ public class LibraryService {
         // - Add borrow record to database
         // - Handle appropriate exceptions
         // - This method should be synchronized or use proper locking
-        return null;
+      // validate input
+      if (studentId == null || studentId.trim().isEmpty()) {
+        throw new IllegalArgumentException("Student ID cannot be null or empty");
+      }
+      if (bookIsbn == null || bookIsbn.trim().isEmpty()) {
+        throw new IllegalArgumentException("Book ISBN cannot be null or empty");
+      }
+
+      // load student
+      Student student = database.getStudent(studentId);
+      if (student == null) {
+        throw new RuntimeException("Student with ID " + studentId + " not found");
+      }
+      if (!student.isActive()) {
+        throw new RuntimeException("Student is not active");
+      }
+      if (!student.canBorrowMoreBooks()) {
+        throw new RuntimeException("Student has reached borrowing limit");
+      }
+
+      // load book
+      Book book;
+      try {
+        book = database.getBook(bookIsbn);
+      } catch (SQLException e) {
+        throw new RuntimeException("Failed to load book", e);
+      }
+      if (book == null) {
+        throw new RuntimeException("Book with ISBN " + bookIsbn + " not found");
+      }
+      if (!book.isAvailable()) {
+        throw new RuntimeException("Book is not available to borrow");
+      }
+
+      // student takes book
+      student.borrowBook(); // this will throw if not allowed
+      // book loses 1 copy
+      book.borrowCopy();    // this will throw if not available
+
+      LocalDateTime now = LocalDateTime.now();
+      LocalDateTime due = now.plusDays(14); // 2 week loan window
+
+      String recordId = "REC-" + System.currentTimeMillis();
+
+      BorrowRecord record = new BorrowRecord(
+        recordId,
+        studentId,
+        bookIsbn,
+        now,
+        due
+      );
+
+      //    - update student row
+      //    - update book row
+      //    - insert new borrow record row
+      boolean studentUpdated = database.updateStudent(student);
+      if (!studentUpdated) {
+        throw new RuntimeException("Failed to update student borrow count");
+      }
+
+      boolean bookUpdated = database.updateBook(book);
+      if (!bookUpdated) {
+        throw new RuntimeException("Failed to update book availability");
+      }
+      database.addBorrowRecord(record);
+      return record;
     }
-    
+
     public void returnBook(String recordId) {
         // TODO: Implement thread-safe book return
         // - Validate record ID is not null or empty

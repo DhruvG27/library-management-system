@@ -4,6 +4,7 @@ import java.sql.*;
 
 import com.corporate.training.library.model.Book;
 import com.corporate.training.library.model.BorrowRecord;
+import com.corporate.training.library.model.BorrowStatus;
 import com.corporate.training.library.model.Student;
 import java.time.LocalDate;
 import java.util.*;
@@ -291,19 +292,6 @@ public class InMemoryDatabase {
         }
     }
 
-    private Book mapBook(ResultSet rs) throws SQLException {
-        Book book = new Book();
-        book.setIsbn(rs.getString("ISBN"));
-        book.setTitle(rs.getString("TITLE"));
-        book.setAuthor(rs.getString("AUTHOR"));
-        book.setCategory(rs.getString("CATEGORY"));
-        book.setTotalCopies(rs.getInt("TOTAL_COPIES"));
-        book.setAvailableCopies(rs.getInt("AVAILABLE_COPIES"));
-        java.sql.Date pubDate = rs.getDate("PUBLISHED_DATE");
-        book.setPublishedDate(pubDate == null ? null : pubDate.toLocalDate());
-        book.setActive(rs.getBoolean("ACTIVE"));
-        return book;
-    }
 
     // Student operations
     public void addStudent(Student student) {
@@ -317,9 +305,6 @@ public class InMemoryDatabase {
             throw new IllegalArgumentException("Student or Student ID cannot be null or empty");
         }
 
-//        if (getStudent(student.getStudentId()) != null) {
-//            throw new IllegalArgumentException("Student with ID " + student.getStudentId() + " already exists");
-//        }
         Student existing = getStudent(student.getStudentId());
         if (existing != null) {
             throw new RuntimeException("Failed to add student as ID already exists: " + student.getStudentId());
@@ -494,19 +479,6 @@ public class InMemoryDatabase {
 //        return false;
     }
 
-    private Student mapStudent(ResultSet rs) throws SQLException {
-      Student student = new Student();
-      student.setStudentId(rs.getString("ID"));
-      student.setFirstName(rs.getString("FIRST_NAME"));
-      student.setLastName(rs.getString("LAST_NAME"));
-      student.setEmail(rs.getString("EMAIL"));
-      student.setDepartment(rs.getString("DEPARTMENT"));
-      student.setPhoneNumber(rs.getString("PHONE_NUMBER"));
-      student.setMaxBooksAllowed(rs.getInt("MAX_BOOKS_ALLOWED"));
-      student.setCurrentBooksBorrowed(rs.getInt("CURRENT_BOOKS_BORROWED"));
-      student.setActive(rs.getBoolean("ACTIVE"));
-      return student;
-    }
 
     private boolean unReturnedBorrowedBooksExistForStudent(String studentId) {
         String sql = """
@@ -525,13 +497,60 @@ public class InMemoryDatabase {
     }
 
     // Borrow record operations
-    public void addBorrowRecord(BorrowRecord record) {
+    public void addBorrowRecord(BorrowRecord record) throws SQLException {
         // TODO: Implement thread-safe borrow record addition
         // - Acquire appropriate lock
         // - Validate record is not null
         // - Check if record with same ID already exists
         // - Add record to collection
         // - Release lock
+      if (record == null || record.getRecordId() == null || record.getRecordId().trim().isEmpty()) {
+          throw new IllegalArgumentException("Borrow record or Record ID cannot be null or empty");
+      }
+      if (getBorrowRecord(record.getRecordId()) != null) {
+          throw new IllegalArgumentException("Borrow record with ID " + record.getRecordId() + " already exists");
+      }
+
+      String sql = """
+        INSERT INTO PUBLIC.BORROW_RECORDS
+        (ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME, RETURN_DATETIME, STATUS, FINE_AMOUNT)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+      try (Connection conn = H2.getConnection();
+          PreparedStatement ps = conn.prepareStatement(sql)) {
+
+        ps.setString(1, record.getRecordId());
+        ps.setString(2, record.getStudentId());
+        ps.setString(3, record.getBookIsbn());
+
+        if (record.getBorrowDate() == null) {
+          throw new IllegalArgumentException("Borrow date cannot be null");
+        }
+        ps.setTimestamp(4, Timestamp.valueOf(record.getBorrowDate()));
+
+        if (record.getDueDate() == null) {
+          throw new IllegalArgumentException("Due date cannot be null");
+        }
+        ps.setTimestamp(5, Timestamp.valueOf(record.getDueDate()));
+
+        if (record.getReturnDate() == null) {
+          ps.setNull(6, Types.TIMESTAMP);
+        } else {
+          ps.setTimestamp(6, Timestamp.valueOf(record.getReturnDate()));
+        }
+
+        if (record.getStatus() == null) {
+          throw new IllegalArgumentException("Borrow status cannot be null");
+        }
+        ps.setString(7, record.getStatus().name());
+
+        ps.setDouble(8, record.getFineAmount());
+
+        ps.executeUpdate();
+      } catch (SQLException e){
+        throw new RuntimeException("Failed to add borrow record (possibly duplicate ID or FK error)", e);
+      }
     }
 
     public BorrowRecord getBorrowRecord(String recordId) {
@@ -539,7 +558,26 @@ public class InMemoryDatabase {
         // - Acquire appropriate lock
         // - Return record by ID
         // - Release lock
-        return null;
+        if (recordId == null || recordId.trim().isEmpty()) {
+            return null;
+        }
+      String sql = """
+        SELECT ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME, RETURN_DATETIME, STATUS, FINE
+               FROM PUBLIC.BORROW_RECORDS WHERE ID = ?
+        """;
+
+      try (Connection conn = H2.getConnection();
+           PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, recordId);
+        try (ResultSet rs = ps.executeQuery()) {
+          if (rs.next()) {
+            return mapBorrowRecord(rs);
+          }
+        }
+      } catch (SQLException e) {
+        throw new RuntimeException("Failed to get borrow record", e);
+      }
+      return null;
     }
 
     public List<BorrowRecord> getAllBorrowRecords() {
@@ -547,7 +585,21 @@ public class InMemoryDatabase {
         // - Acquire appropriate lock
         // - Return copy of all records to avoid external modification
         // - Release lock
-        return new ArrayList<>();
+      String sql = """
+      SELECT ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME,
+          RETURN_DATETIME, STATUS, FINE FROM PUBLIC.BORROW_RECORDS ORDER BY PUBLIC.BORROW_DATETIME DESC
+      """;
+      List<BorrowRecord> list = new ArrayList<>();
+      try (Connection conn = H2.getConnection();
+           PreparedStatement ps = conn.prepareStatement(sql);
+           ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          list.add(mapBorrowRecord(rs));
+        }
+        return list;
+      } catch (SQLException e) {
+        throw new RuntimeException("Failed to get all borrow records", e);
+      }
     }
 
     public List<BorrowRecord> getBorrowRecordsByStudent(String studentId) {
@@ -556,8 +608,28 @@ public class InMemoryDatabase {
         // - Filter records by student ID
         // - Return list of matching records
         // - Release lock
-        return new ArrayList<>();
+      if (studentId == null || studentId.trim().isEmpty()) {
+          throw new IllegalArgumentException("Student ID cannot be null or empty");
+      }
+      String sql = """
+      SELECT ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME, RETURN_DATETIME, STATUS, FINE
+      FROM PUBLIC.BORROW_RECORDS WHERE STUDENT_ID = ? ORDER BY PUBLIC.BORROW_DATETIME DESC
+      """;
+      List<BorrowRecord> list = new ArrayList<>();
+      try (Connection conn = H2.getConnection();
+           PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, studentId);
+        try (ResultSet rs = ps.executeQuery()) {
+          while (rs.next()) {
+            list.add(mapBorrowRecord(rs));
+          }
+        }
+        return list;
+      } catch (SQLException e) {
+        throw new RuntimeException("Failed to get records by student", e);
+      }
     }
+
 
     public List<BorrowRecord> getBorrowRecordsByBook(String bookIsbn) {
         // TODO: Implement thread-safe borrow record search by book
@@ -565,7 +637,26 @@ public class InMemoryDatabase {
         // - Filter records by book ISBN
         // - Return list of matching records
         // - Release lock
-        return new ArrayList<>();
+      if (bookIsbn == null || bookIsbn.trim().isEmpty()) {
+        throw new IllegalArgumentException("Book ISBN cannot be null or empty");
+      }
+      String sql = """
+        SELECT ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME, RETURN_DATETIME, STATUS, FINE 
+        FROM PUBLIC.BORROW_RECORDS WHERE BOOK_ISBN = ? ORDER BY BORROW_DATETIME DESC
+        """;
+      List<BorrowRecord> list = new ArrayList<>();
+      try (Connection conn = H2.getConnection();
+           PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, bookIsbn);
+        try (ResultSet rs = ps.executeQuery()) {
+          while (rs.next()) {
+            list.add(mapBorrowRecord(rs));
+          }
+        }
+        return list;
+      } catch (SQLException e) {
+        throw new RuntimeException("Failed to get records by book", e);
+      }
     }
 
     public List<BorrowRecord> getOverdueRecords() {
@@ -574,7 +665,23 @@ public class InMemoryDatabase {
         // - Filter records that are overdue
         // - Return list of overdue records
         // - Release lock
-        return new ArrayList<>();
+      String sql = """
+        SELECT ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME,
+        RETURN_DATETIME, STATUS, FINE FROM PUBLIC.BORROW_RECORDS
+        WHERE RETURN_DATETIME IS NULL AND DUE_DATETIME < CURRENT_TIMESTAMP
+        ORDER BY DUE_DATETIME ASC
+        """;
+      List<BorrowRecord> list = new ArrayList<>();
+      try (Connection conn = H2.getConnection();
+           PreparedStatement ps = conn.prepareStatement(sql);
+           ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          list.add(mapBorrowRecord(rs));
+        }
+        return list;
+      } catch (SQLException e) {
+        throw new RuntimeException("Failed to get overdue records", e);
+      }
     }
 
     public boolean updateBorrowRecord(BorrowRecord record) {
@@ -585,7 +692,39 @@ public class InMemoryDatabase {
         // - Update record in collection
         // - Release lock
         // - Return true if updated, false if record not found
+      if (record == null || record.getRecordId() == null || record.getRecordId().trim().isEmpty()) {
         return false;
+      }
+      String sql = """
+        UPDATE PUBLIC.BORROW_RECORDS SET
+        STUDENT_ID=?, BOOK_ISBN=?, BORROW_DATETIME=?, DUE_DATETIME=?, RETURN_DATETIME=?, STATUS=?, FINE=?
+        WHERE ID=?
+        """;
+
+      try (Connection conn = H2.getConnection();
+           PreparedStatement ps = conn.prepareStatement(sql)) {
+
+        ps.setString(1, record.getStudentId());
+        ps.setString(2, record.getBookIsbn());
+        ps.setTimestamp(3, Timestamp.valueOf(record.getBorrowDate()));
+        ps.setTimestamp(4, Timestamp.valueOf(record.getDueDate()));
+
+        if (record.getReturnDate() == null) {
+          ps.setNull(5, java.sql.Types.TIMESTAMP);
+        } else {
+          ps.setTimestamp(5, Timestamp.valueOf(record.getReturnDate()));
+        }
+
+        ps.setString(6, record.getStatus().name());
+        ps.setDouble(7, record.getFineAmount());
+
+        ps.setString(8, record.getRecordId());
+
+        int rows = ps.executeUpdate();
+        return rows == 1;
+      } catch (SQLException e) {
+        return false;
+      }
     }
 
     // Utility methods
@@ -597,9 +736,9 @@ public class InMemoryDatabase {
         // Note: This method should be used only for testing
         try (Connection conn = H2.getConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.executeUpdate("DELETE FROM BORROW_RECORDS");
-            stmt.executeUpdate("DELETE FROM STUDENTS");
-            stmt.executeUpdate("DELETE FROM BOOKS");
+            stmt.executeUpdate("DELETE FROM PUBLIC.BORROW_RECORDS");
+            stmt.executeUpdate("DELETE FROM PUBLIC.STUDENTS");
+            stmt.executeUpdate("DELETE FROM PUBLIC.BOOKS");
         } catch (SQLException e) {
             throw new RuntimeException("Failed to Clear Data", e);
         }
@@ -609,7 +748,7 @@ public class InMemoryDatabase {
         // TODO: Implement thread-safe count of total books
 //        return 0;
         try (Connection conn = H2.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM BOOKS");
+             PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM PUBLIC.BOOKS");
              ResultSet rs = ps.executeQuery()) {
             rs.next();
             return rs.getInt(1);
@@ -622,7 +761,7 @@ public class InMemoryDatabase {
         // TODO: Implement thread-safe count of total students
 //        return 0;
         try (Connection conn = H2.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM STUDENTS");
+             PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM PUBLIC.STUDENTS");
              ResultSet rs = ps.executeQuery()) {
             rs.next();
             return rs.getInt(1);
@@ -636,13 +775,71 @@ public class InMemoryDatabase {
         // TODO: Implement thread-safe count of total borrow records
 //        return 0;
         try (Connection conn = H2.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM BORROW_RECORDS");
+             PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM PUBLIC.BORROW_RECORDS");
              ResultSet rs = ps.executeQuery()) {
             rs.next();
             return rs.getInt(1);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Book mapBook(ResultSet rs) throws SQLException {
+      Book book = new Book();
+      book.setIsbn(rs.getString("ISBN"));
+      book.setTitle(rs.getString("TITLE"));
+      book.setAuthor(rs.getString("AUTHOR"));
+      book.setCategory(rs.getString("CATEGORY"));
+      book.setTotalCopies(rs.getInt("TOTAL_COPIES"));
+      book.setAvailableCopies(rs.getInt("AVAILABLE_COPIES"));
+      java.sql.Date pubDate = rs.getDate("PUBLISHED_DATE");
+      book.setPublishedDate(pubDate == null ? null : pubDate.toLocalDate());
+      book.setActive(rs.getBoolean("ACTIVE"));
+      return book;
+    }
+
+    private Student mapStudent(ResultSet rs) throws SQLException {
+      Student student = new Student();
+      student.setStudentId(rs.getString("ID"));
+      student.setFirstName(rs.getString("FIRST_NAME"));
+      student.setLastName(rs.getString("LAST_NAME"));
+      student.setEmail(rs.getString("EMAIL"));
+      student.setDepartment(rs.getString("DEPARTMENT"));
+      student.setPhoneNumber(rs.getString("PHONE_NUMBER"));
+      student.setMaxBooksAllowed(rs.getInt("MAX_BOOKS_ALLOWED"));
+      student.setCurrentBooksBorrowed(rs.getInt("CURRENT_BOOKS_BORROWED"));
+      student.setActive(rs.getBoolean("ACTIVE"));
+      return student;
+    }
+
+    private BorrowRecord mapBorrowRecord(ResultSet rs) throws SQLException {
+      BorrowRecord br = new BorrowRecord();
+      br.setRecordId(rs.getString("ID"));
+      br.setStudentId(rs.getString("STUDENT_ID"));
+      br.setBookIsbn(rs.getString("BOOK_ISBN"));
+
+      Timestamp borrowTs = rs.getTimestamp("BORROW_DATETIME");
+      if (borrowTs != null) {
+          br.setBorrowDate(borrowTs.toLocalDateTime());
+      }
+
+      Timestamp dueTs = rs.getTimestamp("DUE_DATETIME");
+      if (dueTs != null) {
+          br.setDueDate(dueTs.toLocalDateTime());
+      }
+
+      Timestamp returnTs = rs.getTimestamp("RETURN_DATETIME");
+      if (returnTs != null) {
+          br.setReturnDate(returnTs.toLocalDateTime());
+      }
+
+      String statusStr = rs.getString("STATUS");
+      if (statusStr != null) {
+          br.setStatus(BorrowStatus.valueOf(statusStr));
+      }
+
+      br.setFineAmount(rs.getDouble("FINE_AMOUNT"));
+      return br;
     }
 }
 
