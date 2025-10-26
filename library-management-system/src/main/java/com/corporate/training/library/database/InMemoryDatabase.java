@@ -72,6 +72,8 @@ public class InMemoryDatabase {
         // - Check if book with same ISBN already exists
         // - Add book to collection
         // - Release lock
+      booksLock.writeLock().lock();
+      try {
         if (book == null || book.getIsbn() == null || book.getIsbn().trim().isEmpty()) {
             throw new IllegalArgumentException("Book or ISBN cannot be null or empty");
         }
@@ -100,6 +102,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to add book", e);
         }
+      } finally {
+        booksLock.writeLock().unlock();
+      }
     }
 
     public Book getBook(String isbn) throws SQLException {
@@ -107,6 +112,8 @@ public class InMemoryDatabase {
         // - Acquire appropriate lock
         // - Return book by ISBN
         // - Release lock
+      booksLock.readLock().lock();
+      try {
         if (isbn == null || isbn.trim().isEmpty()) return null;
 
         String sql = """
@@ -126,9 +133,14 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to get book", e);
         }
+      } finally {
+        booksLock.readLock().unlock();
+      }
     }
 
     public Book getBookByTitle(String title) throws SQLException {
+      booksLock.readLock().lock();
+      try{
         if (title == null || title.trim().isEmpty()) return null;
         String sql = """
         SELECT ISBN, TITLE, AUTHOR, CATEGORY, TOTAL_COPIES, AVAILABLE_COPIES, PUBLISHED_DATE, ACTIVE
@@ -146,7 +158,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to get book by title", e);
         }
-
+      } finally {
+        booksLock.readLock().unlock();
+      }
 
     }
 
@@ -155,6 +169,8 @@ public class InMemoryDatabase {
         // - Acquire appropriate lock
         // - Return copy of all books to avoid external modification
         // - Release lock
+      booksLock.readLock().lock();
+      try {
 
         String sql = """
             SELECT ISBN, TITLE, AUTHOR, CATEGORY, TOTAL_COPIES, AVAILABLE_COPIES, PUBLISHED_DATE, ACTIVE
@@ -171,7 +187,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to Get All Books", e);
         }
-//        return new ArrayList<>();
+      } finally {
+        booksLock.readLock().unlock();
+      }
     }
 
     public List<Book> getBooksByAuthor(String author) {
@@ -180,6 +198,8 @@ public class InMemoryDatabase {
         // - Filter books by author (case-insensitive)
         // - Return list of matching books
         // - Release lock
+      booksLock.readLock().lock();
+      try {
         if (author == null|| author.trim().isEmpty()) {
             throw new IllegalArgumentException("Author cannot be null or empty");
         }
@@ -200,7 +220,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to search by author", e);
         }
-//        return new ArrayList<>();
+      } finally {
+        booksLock.readLock().unlock();
+      }
     }
 
     public List<Book> getBooksByCategory(String category) {
@@ -209,6 +231,8 @@ public class InMemoryDatabase {
         // - Filter books by category (case-insensitive)
         // - Return list of matching books
         // - Release lock
+      booksLock.readLock().lock();
+      try {
         if (category == null || category.trim().isEmpty()) {
             throw new IllegalArgumentException("Category cannot be null or empty");
         }
@@ -230,7 +254,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to search by category", e);
         }
-//        return new ArrayList<>();
+      } finally {
+        booksLock.readLock().unlock();
+      }
     }
 
     public boolean updateBook(Book book) {
@@ -241,6 +267,8 @@ public class InMemoryDatabase {
         // - Update book in collection
         // - Release lock
         // - Return true if updated, false if book not found
+      booksLock.writeLock().lock();
+      try {
         if (book == null || book.getIsbn() == null || book.getIsbn().trim().isEmpty()) {
             return false;
         }
@@ -271,6 +299,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             return false;
         }
+      } finally {
+        booksLock.writeLock().unlock();
+      }
     }
 
     public boolean deleteBook(String isbn) {
@@ -280,6 +311,8 @@ public class InMemoryDatabase {
         // - Remove book from collection
         // - Release lock
         // - Return true if deleted, false if book not found or has active borrows
+      booksLock.writeLock().lock();
+      try {
         if (isbn == null || isbn.trim().isEmpty()) {
             return false;
         }
@@ -290,6 +323,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             return false;
         }
+      } finally {
+        booksLock.writeLock().unlock();
+      }
     }
 
 
@@ -301,6 +337,8 @@ public class InMemoryDatabase {
         // - Check if student with same ID already exists
         // - Add student to collection
         // - Release lock
+      studentsLock.writeLock().lock();
+      try {
         if (student == null || student.getStudentId() == null || student.getStudentId().trim().isEmpty()) {
             throw new IllegalArgumentException("Student or Student ID cannot be null or empty");
         }
@@ -332,6 +370,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to add student", e);
         }
+      } finally {
+        studentsLock.writeLock().unlock();
+      }
 
     }
 
@@ -340,6 +381,8 @@ public class InMemoryDatabase {
         // - Acquire appropriate lock
         // - Return student by ID
         // - Release lock
+      studentsLock.readLock().lock();
+      try {
         if (studentId == null || studentId.trim().isEmpty()) {
             return null;
         }
@@ -361,6 +404,9 @@ public class InMemoryDatabase {
             throw new RuntimeException("Failed to get student", e);
         }
         return null;
+      } finally {
+        studentsLock.readLock().unlock();
+      }
     }
 
     public List<Student> getAllStudents() {
@@ -368,6 +414,8 @@ public class InMemoryDatabase {
         // - Acquire appropriate lock
         // - Return copy of all students to avoid external modification
         // - Release lock
+      studentsLock.readLock().lock();
+      try {
         String sql = """
         SELECT ID, FIRST_NAME, LAST_NAME, EMAIL, DEPARTMENT, PHONE_NUMBER,
                MAX_BOOKS_ALLOWED, CURRENT_BOOKS_BORROWED, ACTIVE
@@ -384,7 +432,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to Get All Students", e);
         }
-//        return new ArrayList<>();
+      } finally {
+        studentsLock.readLock().unlock();
+      }
     }
 
     public List<Student> getStudentsByDepartment(String department) {
@@ -393,6 +443,8 @@ public class InMemoryDatabase {
         // - Filter students by department (case-insensitive)
         // - Return list of matching students
         // - Release lock
+      studentsLock.readLock().lock();
+      try {
         if (department == null || department.trim().isEmpty()) {
             throw new IllegalArgumentException("Department cannot be null or empty");
         }
@@ -419,6 +471,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to Get Students by Department", e);
         }
+      } finally {
+        studentsLock.readLock().unlock();
+      }
 //        return new ArrayList<>();
     }
 
@@ -430,6 +485,8 @@ public class InMemoryDatabase {
         // - Update student in collection
         // - Release lock
         // - Return true if updated, false if student not found
+      studentsLock.writeLock().lock();
+      try {
         if (student == null || student.getStudentId() == null || student.getStudentId().trim().isEmpty()) {
             return false;
         }
@@ -453,7 +510,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             return false;
         }
-//        return false;
+      } finally {
+        studentsLock.writeLock().unlock();
+      }
     }
 
     public boolean deleteStudent(String studentId) {
@@ -463,6 +522,8 @@ public class InMemoryDatabase {
         // - Remove student from collection
         // - Release lock
         // - Return true if deleted, false if student not found or has active borrows
+      studentsLock.writeLock().lock();
+      try {
         if (studentId == null || studentId.trim().isEmpty()) {
             return false;
         }
@@ -476,11 +537,16 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             return false;
         }
+      } finally {
+        studentsLock.writeLock().unlock();
+      }
 //        return false;
     }
 
 
     private boolean unReturnedBorrowedBooksExistForStudent(String studentId) {
+      borrowRecordsLock.readLock().lock();
+      try {
         String sql = """
           SELECT COUNT(*) FROM PUBLIC.BORROW_RECORDS
           WHERE STUDENT_ID = ? AND RETURN_DATETIME IS NULL""";
@@ -494,6 +560,9 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to check unreturned borrows", e);
         }
+      } finally {
+        borrowRecordsLock.readLock().unlock();
+      }
     }
 
     // Borrow record operations
@@ -504,6 +573,8 @@ public class InMemoryDatabase {
         // - Check if record with same ID already exists
         // - Add record to collection
         // - Release lock
+      borrowRecordsLock.writeLock().lock();
+      try {
       if (record == null || record.getRecordId() == null || record.getRecordId().trim().isEmpty()) {
           throw new IllegalArgumentException("Borrow record or Record ID cannot be null or empty");
       }
@@ -551,6 +622,9 @@ public class InMemoryDatabase {
       } catch (SQLException e){
         throw new RuntimeException("Failed to add borrow record (possibly duplicate ID or FK error)", e);
       }
+      } finally {
+        borrowRecordsLock.writeLock().unlock();
+      }
     }
 
     public BorrowRecord getBorrowRecord(String recordId) {
@@ -558,6 +632,8 @@ public class InMemoryDatabase {
         // - Acquire appropriate lock
         // - Return record by ID
         // - Release lock
+      borrowRecordsLock.readLock().lock();
+      try {
         if (recordId == null || recordId.trim().isEmpty()) {
             return null;
         }
@@ -578,13 +654,19 @@ public class InMemoryDatabase {
         throw new RuntimeException("Failed to get borrow record", e);
       }
       return null;
+      } finally {
+        borrowRecordsLock.readLock().unlock();
+      }
     }
+
 
     public List<BorrowRecord> getAllBorrowRecords() {
         // TODO: Implement thread-safe retrieval of all borrow records
         // - Acquire appropriate lock
         // - Return copy of all records to avoid external modification
         // - Release lock
+      borrowRecordsLock.readLock().lock();
+      try {
       String sql = """
       SELECT ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME, RETURN_DATETIME, STATUS, FINE
           FROM PUBLIC.BORROW_RECORDS
@@ -601,6 +683,9 @@ public class InMemoryDatabase {
       } catch (SQLException e) {
         throw new RuntimeException("Failed to get all borrow records", e);
       }
+      } finally {
+        borrowRecordsLock.readLock().unlock();
+      }
     }
 
     public List<BorrowRecord> getBorrowRecordsByStudent(String studentId) {
@@ -609,6 +694,8 @@ public class InMemoryDatabase {
         // - Filter records by student ID
         // - Return list of matching records
         // - Release lock
+      borrowRecordsLock.readLock().lock();
+      try {
       if (studentId == null || studentId.trim().isEmpty()) {
           throw new IllegalArgumentException("Student ID cannot be null or empty");
       }
@@ -631,6 +718,9 @@ public class InMemoryDatabase {
       } catch (SQLException e) {
         throw new RuntimeException("Failed to get records by student", e);
       }
+      } finally {
+        borrowRecordsLock.readLock().unlock();
+      }
     }
 
 
@@ -640,6 +730,8 @@ public class InMemoryDatabase {
         // - Filter records by book ISBN
         // - Return list of matching records
         // - Release lock
+      borrowRecordsLock.readLock().lock();
+      try {
       if (bookIsbn == null || bookIsbn.trim().isEmpty()) {
         throw new IllegalArgumentException("Book ISBN cannot be null or empty");
       }
@@ -660,6 +752,9 @@ public class InMemoryDatabase {
       } catch (SQLException e) {
         throw new RuntimeException("Failed to get records by book", e);
       }
+      } finally {
+        borrowRecordsLock.readLock().unlock();
+      }
     }
 
     public List<BorrowRecord> getOverdueRecords() {
@@ -668,6 +763,8 @@ public class InMemoryDatabase {
         // - Filter records that are overdue
         // - Return list of overdue records
         // - Release lock
+      borrowRecordsLock.readLock().lock();
+      try {
       String sql = """
         SELECT ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME,
         RETURN_DATETIME, STATUS, FINE FROM PUBLIC.BORROW_RECORDS
@@ -685,7 +782,11 @@ public class InMemoryDatabase {
       } catch (SQLException e) {
         throw new RuntimeException("Failed to get overdue records", e);
       }
+      } finally {
+        borrowRecordsLock.readLock().unlock();
+      }
     }
+
 
     public boolean updateBorrowRecord(BorrowRecord record) {
         // TODO: Implement thread-safe borrow record update
@@ -695,6 +796,8 @@ public class InMemoryDatabase {
         // - Update record in collection
         // - Release lock
         // - Return true if updated, false if record not found
+      borrowRecordsLock.writeLock().lock();
+      try {
       if (record == null || record.getRecordId() == null || record.getRecordId().trim().isEmpty()) {
         return false;
       }
@@ -728,6 +831,9 @@ public class InMemoryDatabase {
       } catch (SQLException e) {
         return false;
       }
+      } finally {
+        borrowRecordsLock.writeLock().unlock();
+      }
     }
 
     // Utility methods
@@ -737,6 +843,10 @@ public class InMemoryDatabase {
         // - Clear all collections
         // - Release all locks
         // Note: This method should be used only for testing
+      borrowRecordsLock.writeLock().lock();
+      studentsLock.writeLock().lock();
+      booksLock.writeLock().lock();
+      try {
         try (Connection conn = H2.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("DELETE FROM PUBLIC.BORROW_RECORDS");
@@ -745,11 +855,18 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to Clear Data", e);
         }
+      } finally {
+        booksLock.writeLock().unlock();
+        studentsLock.writeLock().unlock();
+        borrowRecordsLock.writeLock().unlock();
+      }
     }
 
     public int getTotalBooksCount() {
         // TODO: Implement thread-safe count of total books
 //        return 0;
+      booksLock.readLock().lock();
+      try {
         try (Connection conn = H2.getConnection();
              PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM PUBLIC.BOOKS");
              ResultSet rs = ps.executeQuery()) {
@@ -758,11 +875,16 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+      } finally {
+        booksLock.readLock().unlock();
+      }
     }
 
     public int getTotalStudentsCount() {
         // TODO: Implement thread-safe count of total students
 //        return 0;
+      studentsLock.readLock().lock();
+      try {
         try (Connection conn = H2.getConnection();
              PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM PUBLIC.STUDENTS");
              ResultSet rs = ps.executeQuery()) {
@@ -771,12 +893,17 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+      } finally {
+        studentsLock.readLock().unlock();
+      }
     }
 
 
     public int getTotalBorrowRecordsCount() {
         // TODO: Implement thread-safe count of total borrow records
 //        return 0;
+      borrowRecordsLock.readLock().lock();
+      try{
         try (Connection conn = H2.getConnection();
              PreparedStatement ps = conn.prepareStatement("SELECT COUNT(*) FROM PUBLIC.BORROW_RECORDS");
              ResultSet rs = ps.executeQuery()) {
@@ -785,9 +912,14 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+      } finally {
+        borrowRecordsLock.readLock().unlock();
+      }
     }
 
     private Book mapBook(ResultSet rs) throws SQLException {
+      booksLock.readLock().lock();
+      try{
       Book book = new Book();
       book.setIsbn(rs.getString("ISBN"));
       book.setTitle(rs.getString("TITLE"));
@@ -799,9 +931,14 @@ public class InMemoryDatabase {
       book.setPublishedDate(pubDate == null ? null : pubDate.toLocalDate());
       book.setActive(rs.getBoolean("ACTIVE"));
       return book;
+      } finally {
+        booksLock.readLock().unlock();
+      }
     }
 
     private Student mapStudent(ResultSet rs) throws SQLException {
+      studentsLock.readLock().lock();
+      try {
       Student student = new Student();
       student.setStudentId(rs.getString("ID"));
       student.setFirstName(rs.getString("FIRST_NAME"));
@@ -813,36 +950,44 @@ public class InMemoryDatabase {
       student.setCurrentBooksBorrowed(rs.getInt("CURRENT_BOOKS_BORROWED"));
       student.setActive(rs.getBoolean("ACTIVE"));
       return student;
+      } finally {
+        studentsLock.readLock().unlock();
+      }
     }
 
     private BorrowRecord mapBorrowRecord(ResultSet rs) throws SQLException {
-      BorrowRecord br = new BorrowRecord();
-      br.setRecordId(rs.getString("ID"));
-      br.setStudentId(rs.getString("STUDENT_ID"));
-      br.setBookIsbn(rs.getString("BOOK_ISBN"));
+      borrowRecordsLock.readLock().lock();
+      try {
+        BorrowRecord br = new BorrowRecord();
+        br.setRecordId(rs.getString("ID"));
+        br.setStudentId(rs.getString("STUDENT_ID"));
+        br.setBookIsbn(rs.getString("BOOK_ISBN"));
 
-      Timestamp borrowTs = rs.getTimestamp("BORROW_DATETIME");
-      if (borrowTs != null) {
+        Timestamp borrowTs = rs.getTimestamp("BORROW_DATETIME");
+        if (borrowTs != null) {
           br.setBorrowDate(borrowTs.toLocalDateTime());
-      }
+        }
 
-      Timestamp dueTs = rs.getTimestamp("DUE_DATETIME");
-      if (dueTs != null) {
+        Timestamp dueTs = rs.getTimestamp("DUE_DATETIME");
+        if (dueTs != null) {
           br.setDueDate(dueTs.toLocalDateTime());
-      }
+        }
 
-      Timestamp returnTs = rs.getTimestamp("RETURN_DATETIME");
-      if (returnTs != null) {
+        Timestamp returnTs = rs.getTimestamp("RETURN_DATETIME");
+        if (returnTs != null) {
           br.setReturnDate(returnTs.toLocalDateTime());
-      }
+        }
 
-      String statusStr = rs.getString("STATUS");
-      if (statusStr != null) {
+        String statusStr = rs.getString("STATUS");
+        if (statusStr != null) {
           br.setStatus(BorrowStatus.valueOf(statusStr));
-      }
+        }
 
-      br.setFineAmount(rs.getDouble("FINE"));
-      return br;
+        br.setFineAmount(rs.getDouble("FINE"));
+        return br;
+      } finally {
+        borrowRecordsLock.readLock().unlock();
+      }
     }
 }
 
