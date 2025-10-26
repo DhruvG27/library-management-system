@@ -513,7 +513,7 @@ public class InMemoryDatabase {
 
       String sql = """
         INSERT INTO PUBLIC.BORROW_RECORDS
-        (ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME, RETURN_DATETIME, STATUS, FINE_AMOUNT)
+        (ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME, RETURN_DATETIME, STATUS, FINE)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """;
 
@@ -586,8 +586,9 @@ public class InMemoryDatabase {
         // - Return copy of all records to avoid external modification
         // - Release lock
       String sql = """
-      SELECT ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME,
-          RETURN_DATETIME, STATUS, FINE FROM PUBLIC.BORROW_RECORDS ORDER BY PUBLIC.BORROW_DATETIME DESC
+      SELECT ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME, RETURN_DATETIME, STATUS, FINE
+          FROM PUBLIC.BORROW_RECORDS
+          ORDER BY BORROW_DATETIME DESC
       """;
       List<BorrowRecord> list = new ArrayList<>();
       try (Connection conn = H2.getConnection();
@@ -613,7 +614,9 @@ public class InMemoryDatabase {
       }
       String sql = """
       SELECT ID, STUDENT_ID, BOOK_ISBN, BORROW_DATETIME, DUE_DATETIME, RETURN_DATETIME, STATUS, FINE
-      FROM PUBLIC.BORROW_RECORDS WHERE STUDENT_ID = ? ORDER BY PUBLIC.BORROW_DATETIME DESC
+          FROM PUBLIC.BORROW_RECORDS
+          WHERE STUDENT_ID = ?
+          ORDER BY BORROW_DATETIME DESC
       """;
       List<BorrowRecord> list = new ArrayList<>();
       try (Connection conn = H2.getConnection();
@@ -838,7 +841,7 @@ public class InMemoryDatabase {
           br.setStatus(BorrowStatus.valueOf(statusStr));
       }
 
-      br.setFineAmount(rs.getDouble("FINE_AMOUNT"));
+      br.setFineAmount(rs.getDouble("FINE"));
       return br;
     }
 }

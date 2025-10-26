@@ -403,7 +403,16 @@ class InMemoryDatabaseTest {
             // - Add a student
             // - Retrieve student by ID
             // - Verify correct student is returned
+          Student stu = new Student("STU200", "Bob", "Marley", "bob@u.edu", "Chemistry");
+          database.addStudent(stu);
+          Student studentFromDb = database.getStudent("STU200");
+          assertThat(studentFromDb).isNotNull();
+          assertThat(studentFromDb.getStudentId()).isEqualTo("STU200");
+          assertThat(studentFromDb.getLastName()).isEqualTo("Marley");
+          assertThat(studentFromDb.getFirstName()).isEqualTo("Bob");
+          assertThat(studentFromDb.getDepartment()).isEqualTo("Chemistry");
         }
+
 
         @Test
         @DisplayName("Should return null for non-existent student")
@@ -411,6 +420,8 @@ class InMemoryDatabaseTest {
             // TODO: Test retrieving non-existent student
             // - Attempt to retrieve student with non-existent ID
             // - Verify null is returned
+            Student studentFromDb = database.getStudent("DOES-NOT-EXIST");
+            assertThat(studentFromDb).isNull();
         }
 
         @Test
@@ -420,6 +431,36 @@ class InMemoryDatabaseTest {
             // - Add multiple students
             // - Get all students
             // - Verify all students are returned
+          Student s1 = new Student("S1", "A", "One", "a@u.edu", "Physics");
+          Student s2 = new Student("S2", "B", "Two", "b@u.edu", "Math");
+          Student s3 = new Student("S3", "C", "Three", "c@u.edu", "Physics");
+
+          database.addStudent(s1);
+          database.addStudent(s2);
+          database.addStudent(s3);
+
+          List<Student> students = database.getAllStudents();
+          assertEquals(3, students.size());
+
+          boolean hasS1 = false;
+          boolean hasS2 = false;
+          boolean hasS3 = false;
+
+          for (Student st : students) {
+            if ("S1".equals(st.getStudentId())) {
+              hasS1 = true;
+            }
+            if ("S2".equals(st.getStudentId())) {
+              hasS2 = true;
+            }
+            if ("S3".equals(st.getStudentId())) {
+              hasS3 = true;
+            }
+          }
+
+          assertTrue(hasS1);
+          assertTrue(hasS2);
+          assertTrue(hasS3);
         }
 
         @Test
@@ -429,6 +470,39 @@ class InMemoryDatabaseTest {
             // - Add multiple students with different departments
             // - Search by department
             // - Verify correct students are returned
+
+          Student s1 = new Student("AA", "Neha", "Patel", "neha@u.edu", "Physics");
+          Student s2 = new Student("BB", "Rohit", "Sharma", "rohit@u.edu", "Math");
+          Student s3 = new Student("CC", "Kiran", "Singh", "kiran@u.edu", "Applied Physics");
+
+          database.addStudent(s1);
+          database.addStudent(s2);
+          database.addStudent(s3);
+
+          List<Student> physicsStudents = database.getStudentsByDepartment("physics"); // case-insensitive
+
+          // Assert size = 2 (AA and CC)
+          assertEquals(2, physicsStudents.size());
+
+          // Check IDs manually
+          boolean hasAA = false;
+          boolean hasCC = false;
+
+          for (Student st : physicsStudents) {
+            if ("AA".equals(st.getStudentId())) {
+              hasAA = true;
+            }
+            if ("CC".equals(st.getStudentId())) {
+              hasCC = true;
+            }
+
+            // Also check department actually contains "phys"
+            String depLower = st.getDepartment().toLowerCase();
+            assertTrue(depLower.contains("phys"));
+          }
+
+          assertTrue(hasAA);
+          assertTrue(hasCC);
         }
 
         @Test
@@ -438,6 +512,25 @@ class InMemoryDatabaseTest {
             // - Add a student
             // - Update student details
             // - Verify student is updated
+          Student s = new Student("STU500", "Anya", "Singh", "anya@u.edu", "Biology");
+          s.setPhoneNumber("111-222-3333");
+          s.setCurrentBooksBorrowed(0);
+          s.setActive(true);
+          database.addStudent(s);
+
+          Student toUpdate = database.getStudent("STU500");
+          toUpdate.setFirstName("Ananya");
+          toUpdate.setDepartment("Microbiology");
+          toUpdate.setCurrentBooksBorrowed(2);
+
+          boolean updated = database.updateStudent(toUpdate);
+
+          assertTrue(updated);
+
+          Student after = database.getStudent("STU500");
+          assertEquals("Ananya", after.getFirstName());
+          assertEquals("Microbiology", after.getDepartment());
+          assertEquals(2, after.getCurrentBooksBorrowed());
         }
 
         @Test
@@ -446,6 +539,11 @@ class InMemoryDatabaseTest {
             // TODO: Test updating non-existent student
             // - Attempt to update non-existent student
             // - Verify false is returned
+          Student s = new Student("GHOST", "X", "Y", "x@y.com", "Math");
+
+          boolean updated = database.updateStudent(s);
+
+          assertFalse(updated);
         }
 
         @Test
@@ -455,7 +553,16 @@ class InMemoryDatabaseTest {
             // - Add a student
             // - Delete student
             // - Verify student is deleted
+          Student s = new Student("DEL1", "User", "Bye", "bye@u.edu", "Math");
+          database.addStudent(s);
+
+          boolean removed = database.deleteStudent("DEL1");
+
+          assertTrue(removed);
+          assertNull(database.getStudent("DEL1"));
+          assertEquals(0, database.getTotalStudentsCount());
         }
+
 
         @Test
         @DisplayName("Should return false when deleting non-existent student")
@@ -463,6 +570,8 @@ class InMemoryDatabaseTest {
             // TODO: Test deleting non-existent student
             // - Attempt to delete non-existent student
             // - Verify false is returned
+          boolean removed = database.deleteStudent("STUDENTDONTEXIST");
+          assertFalse(removed);
         }
     }
 
@@ -472,37 +581,115 @@ class InMemoryDatabaseTest {
 
         @Test
         @DisplayName("Should add borrow record successfully")
-        void shouldAddBorrowRecordSuccessfully() {
+        void shouldAddBorrowRecordSuccessfully() throws SQLException {
             // TODO: Test adding a borrow record
             // - Add borrow record to database
             // - Verify record is added
             // - Verify record can be retrieved
+          Book b = new Book("ISBN-111", "Clean Code", "Bob", "CS", 2);
+          Student s = new Student("STU900", "Ram", "Kumar", "ram@u.edu", "CS");
+          database.addBook(b);
+          database.addStudent(s);
+
+          BorrowRecord rec = new BorrowRecord(
+            "REC100",
+            "STU900",
+            "ISBN-111",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(7)
+          );
+
+          database.addBorrowRecord(rec);
+
+          BorrowRecord fromDb = database.getBorrowRecord("REC100");
+          assertNotNull(fromDb);
+
+          assertEquals("STU900", fromDb.getStudentId());
+          assertEquals("ISBN-111", fromDb.getBookIsbn());
+          assertEquals(com.corporate.training.library.model.BorrowStatus.BORROWED, fromDb.getStatus());
+
+          assertEquals(1, database.getTotalBorrowRecordsCount());
         }
 
         @Test
         @DisplayName("Should throw exception when adding null borrow record")
-        void shouldThrowExceptionWhenAddingNullBorrowRecord() {
+        void shouldThrowExceptionWhenAddingNullBorrowRecord() throws SQLException {
             // TODO: Test adding null borrow record
             // - Attempt to add null borrow record
             // - Verify appropriate exception is thrown
+          try {
+            database.addBorrowRecord(null);
+            Assertions.fail("Expected IllegalArgumentException");
+          } catch (IllegalArgumentException expected) {
+            // ok
+          }
         }
 
         @Test
         @DisplayName("Should throw exception when adding duplicate borrow record")
-        void shouldThrowExceptionWhenAddingDuplicateBorrowRecord() {
+        void shouldThrowExceptionWhenAddingDuplicateBorrowRecord() throws SQLException {
             // TODO: Test adding duplicate borrow record
             // - Add a borrow record
             // - Attempt to add another record with same ID
             // - Verify appropriate exception is thrown
+          Book b = new Book("ISBN-222", "DSA Book", "Alice", "CS", 3);
+          Student s = new Student("STU901", "Shiv", "Verma", "shiv@u.edu", "EE");
+          database.addBook(b);
+          database.addStudent(s);
+
+          BorrowRecord r1 = new BorrowRecord(
+            "REC200",
+            "STU901",
+            "ISBN-222",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(10)
+          );
+
+          database.addBorrowRecord(r1);
+
+          BorrowRecord r2 = new BorrowRecord(
+            "REC200", // same ID
+            "STU901",
+            "ISBN-222",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(3)
+          );
+
+          try {
+            database.addBorrowRecord(r2);
+            Assertions.fail("Expected RuntimeException for duplicate record ID");
+          } catch (RuntimeException ex) {
+            String msg = ex.getMessage();
+            assertNotNull(msg);
+            assertTrue(msg.contains("already exists"));
+          }
         }
 
         @Test
         @DisplayName("Should retrieve borrow record by ID")
-        void shouldRetrieveBorrowRecordById() {
+        void shouldRetrieveBorrowRecordById() throws SQLException {
             // TODO: Test retrieving borrow record by ID
             // - Add a borrow record
             // - Retrieve record by ID
             // - Verify correct record is returned
+          Book b = new Book("ISBN-333", "Networks", "Tanenbaum", "CS", 1);
+          Student s = new Student("STU902", "Priya", "Jain", "priya@u.edu", "IT");
+          database.addBook(b);
+          database.addStudent(s);
+
+          BorrowRecord rec = new BorrowRecord(
+            "REC300",
+            "STU902",
+            "ISBN-333",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(5)
+          );
+          database.addBorrowRecord(rec);
+
+          BorrowRecord fromDb = database.getBorrowRecord("REC300");
+
+          assertNotNull(fromDb);
+          assertEquals("REC300", fromDb.getRecordId());
         }
 
         @Test
@@ -511,33 +698,171 @@ class InMemoryDatabaseTest {
             // TODO: Test retrieving non-existent borrow record
             // - Attempt to retrieve record with non-existent ID
             // - Verify null is returned
+          BorrowRecord fromDb = database.getBorrowRecord("DOES-NOT-EXIST");
+          assertNull(fromDb);
         }
 
         @Test
         @DisplayName("Should get all borrow records")
-        void shouldGetAllBorrowRecords() {
+        void shouldGetAllBorrowRecords() throws SQLException {
             // TODO: Test getting all borrow records
             // - Add multiple borrow records
             // - Get all records
             // - Verify all records are returned
+          Book b = new Book("ISBN-444", "ML Basics", "Zed", "AI", 4);
+          Student s = new Student("STU903", "Kunal", "Arora", "kunal@u.edu", "AI");
+          database.addBook(b);
+          database.addStudent(s);
+
+          BorrowRecord r1 = new BorrowRecord(
+            "REC400",
+            "STU903",
+            "ISBN-444",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(5)
+          );
+          BorrowRecord r2 = new BorrowRecord(
+            "REC401",
+            "STU903",
+            "ISBN-444",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(10)
+          );
+          database.addBorrowRecord(r1);
+          database.addBorrowRecord(r2);
+
+          // Act
+          List<BorrowRecord> all = database.getAllBorrowRecords();
+
+          // Assert size
+          assertEquals(2, all.size());
+
+          // Check both IDs exist
+          boolean has400 = false;
+          boolean has401 = false;
+
+          for (BorrowRecord br : all) {
+            if ("REC400".equals(br.getRecordId())) {
+              has400 = true;
+            }
+            if ("REC401".equals(br.getRecordId())) {
+              has401 = true;
+            }
+          }
+
+          assertTrue(has400);
+          assertTrue(has401);
+
         }
 
         @Test
         @DisplayName("Should search borrow records by student")
-        void shouldSearchBorrowRecordsByStudent() {
+        void shouldSearchBorrowRecordsByStudent() throws SQLException {
             // TODO: Test searching borrow records by student
             // - Add multiple borrow records for different students
             // - Search by student ID
             // - Verify correct records are returned
+          Book b = new Book("ISBN-555", "OS Concepts", "Galvin", "CS", 2);
+          Student s1 = new Student("STU904", "Nia", "Roy", "nia@u.edu", "CS");
+          Student s2 = new Student("STU905", "Ravi", "Kapoor", "ravi@u.edu", "CS");
+          database.addBook(b);
+          database.addStudent(s1);
+          database.addStudent(s2);
+
+          BorrowRecord r1 = new BorrowRecord(
+            "REC500",
+            "STU904",
+            "ISBN-555",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(7)
+          );
+          BorrowRecord r2 = new BorrowRecord(
+            "REC501",
+            "STU905",
+            "ISBN-555",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(7)
+          );
+          database.addBorrowRecord(r1);
+          database.addBorrowRecord(r2);
+
+          List<BorrowRecord> stu904Records = database.getBorrowRecordsByStudent("STU904");
+
+          assertEquals(1, stu904Records.size());
+          BorrowRecord only = stu904Records.get(0);
+          assertEquals("REC500", only.getRecordId());
+          assertEquals("STU904", only.getStudentId());
         }
+
 
         @Test
         @DisplayName("Should search borrow records by book")
-        void shouldSearchBorrowRecordsByBook() {
+        void shouldSearchBorrowRecordsByBook() throws SQLException {
             // TODO: Test searching borrow records by book
             // - Add multiple borrow records for different books
             // - Search by book ISBN
             // - Verify correct records are returned
+          Book b = new Book("ISBN-777", "Distributed Systems", "Tanenbaum", "CS", 4);
+          Student s1 = new Student("STU910", "Arjun", "Singh", "arjun@u.edu", "CSE");
+          Student s2 = new Student("STU911", "Meera", "Iyer", "meera@u.edu", "CSE");
+          Student s3 = new Student("STU912", "Raja", "Denzongpa", "rd@e.edu", "AI");
+          database.addBook(b);
+          database.addStudent(s1);
+          database.addStudent(s2);
+          database.addStudent(s3);
+
+          BorrowRecord r1 = new BorrowRecord(
+            "REC700",
+            "STU910",
+            "ISBN-777",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(4)
+          );
+          BorrowRecord r2 = new BorrowRecord(
+            "REC701",
+            "STU911",
+            "ISBN-777",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(9)
+          );
+          BorrowRecord r3 = new BorrowRecord(
+            "REC702",
+            "STU912",
+            "ISBN-777",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(5)
+          );
+
+
+          database.addBorrowRecord(r1);
+          database.addBorrowRecord(r2);
+          database.addBorrowRecord(r3);
+
+          List<BorrowRecord> bookRecords = database.getBorrowRecordsByBook("ISBN-777");
+
+          assertEquals(3, bookRecords.size());
+
+          boolean has700 = false;
+          boolean has701 = false;
+          boolean has702 = false;
+
+          for (BorrowRecord br : bookRecords) {
+            if ("REC700".equals(br.getRecordId())) {
+              has700 = true;
+            }
+            if ("REC701".equals(br.getRecordId())) {
+              has701 = true;
+            }
+            if ("REC702".equals(br.getRecordId())) {
+              has702 = true;
+            }
+            assertEquals("ISBN-777", br.getBookIsbn());
+          }
+
+          assertTrue(has700);
+          assertTrue(has701);
+          assertTrue(has702);
+
         }
 
         @Test
@@ -547,15 +872,45 @@ class InMemoryDatabaseTest {
             // - Add multiple borrow records with different due dates
             // - Get overdue records
             // - Verify only overdue records are returned
+
         }
 
         @Test
         @DisplayName("Should update borrow record successfully")
-        void shouldUpdateBorrowRecordSuccessfully() {
+        void shouldUpdateBorrowRecordSuccessfully() throws SQLException {
             // TODO: Test updating a borrow record
             // - Add a borrow record
             // - Update record details
             // - Verify record is updated
+          Book b = new Book("ISBN-888", "AI Advanced", "Dr X", "AI", 1);
+          Student s = new Student("STU920", "Leena", "Khanna", "leena@u.edu", "AI");
+          database.addBook(b);
+          database.addStudent(s);
+
+          BorrowRecord rec = new BorrowRecord(
+            "REC800",
+            "STU920",
+            "ISBN-888",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(3)
+          );
+          database.addBorrowRecord(rec);
+
+          BorrowRecord toUpdate = database.getBorrowRecord("REC800");
+          LocalDateTime returnTime = LocalDateTime.now().plusDays(5);
+          toUpdate.setReturnDate(returnTime);
+          toUpdate.setStatus(com.corporate.training.library.model.BorrowStatus.RETURNED);
+          toUpdate.setFineAmount(10.0);
+
+          boolean updated = database.updateBorrowRecord(toUpdate);
+
+          assertTrue(updated);
+
+          BorrowRecord after = database.getBorrowRecord("REC800");
+          assertEquals(com.corporate.training.library.model.BorrowStatus.RETURNED, after.getStatus());
+          assertEquals(10.0, after.getFineAmount(), 0.0001);
+          assertNotNull(after.getReturnDate());
+
         }
 
         @Test
@@ -564,6 +919,18 @@ class InMemoryDatabaseTest {
             // TODO: Test updating non-existent borrow record
             // - Attempt to update non-existent record
             // - Verify false is returned
+          BorrowRecord fake = new BorrowRecord(
+            "REC999",
+            "FAKE-STUDENT",
+            "FAKE-BOOK",
+            LocalDateTime.now(),
+            LocalDateTime.now().plusDays(2)
+          );
+
+          boolean updated = database.updateBorrowRecord(fake);
+
+          assertFalse(updated);
+
         }
     }
 
@@ -578,6 +945,7 @@ class InMemoryDatabaseTest {
             // - Add books, students, and borrow records
             // - Clear all data
             // - Verify all collections are empty
+
         }
 
         @Test

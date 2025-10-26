@@ -215,7 +215,7 @@ public class LibraryService {
     }
     
     // Borrowing operations (these should be thread-safe)
-    public BorrowRecord borrowBook(String studentId, String bookIsbn) throws SQLException {
+    public synchronized BorrowRecord borrowBook(String studentId, String bookIsbn) throws SQLException {
         // TODO: Implement thread-safe book borrowing
         // - Validate student ID and book ISBN are not null or empty
         // - Check if student exists and is active
@@ -306,6 +306,58 @@ public class LibraryService {
         // - Calculate fine if overdue
         // - Handle appropriate exceptions
         // - This method should be synchronized or use proper locking
+        if (recordId == null || recordId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Record ID cannot be null or empty");
+        }
+
+      BorrowRecord record = database.getBorrowRecord(recordId);
+      if (record == null) {
+        throw new RuntimeException("Borrow record " + recordId + " not found");
+      }
+
+      if (record.getStatus() == com.corporate.training.library.model.BorrowStatus.RETURNED) {
+        throw new RuntimeException("Book already returned for record " + recordId);
+      }
+
+
+      Student student = database.getStudent(record.getStudentId());
+      if (student == null) {
+        throw new RuntimeException("Student " + record.getStudentId() + " not found");
+      }
+
+      Book book;
+      try {
+        book = database.getBook(record.getBookIsbn());
+      } catch (SQLException e) {
+        throw new RuntimeException("Failed to load book for return", e);
+      }
+      if (book == null) {
+        throw new RuntimeException("Book " + record.getBookIsbn() + " not found");
+      }
+      // student returns book
+      student.returnBook();
+      // library gets one more copy
+      book.returnCopy();
+
+      // mark record returned
+      LocalDateTime now = LocalDateTime.now();
+      record.returnBook(now);  // sets returnDate, status=RETURNED, also calculateFine(1.0)
+
+      boolean studentUpdated = database.updateStudent(student);
+      if (!studentUpdated) {
+        throw new RuntimeException("Failed to update student after return");
+      }
+
+      boolean bookUpdated = database.updateBook(book);
+      if (!bookUpdated) {
+        throw new RuntimeException("Failed to update book copies after return");
+      }
+
+      boolean recordUpdated = database.updateBorrowRecord(record);
+      if (!recordUpdated) {
+        throw new RuntimeException("Failed to update borrow record as returned");
+      }
+
     }
     
     public List<BorrowRecord> getStudentBorrowHistory(String studentId) {
@@ -313,7 +365,14 @@ public class LibraryService {
         // - Validate student ID is not null or empty
         // - Get all borrow records for the student
         // - Return list of borrow records
-        return null;
+        if (studentId == null || studentId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Student ID cannot be null or empty");
+        }
+        Student s = database.getStudent(studentId);
+        if (s == null) {
+            throw new RuntimeException("Student with ID " + studentId + " not found");
+        }
+        return database.getBorrowRecordsByStudent(studentId);
     }
     
     public List<BorrowRecord> getOverdueBooks() {
@@ -321,7 +380,15 @@ public class LibraryService {
         // - Get all borrow records from database
         // - Filter records that are overdue
         // - Return list of overdue records
-        return null;
+
+        List<BorrowRecord> allRecords = database.getAllBorrowRecords();
+        List<BorrowRecord> overdueRecords = new ArrayList<>();
+        for (BorrowRecord record : allRecords) {
+            if (record.isOverdue()) {
+                overdueRecords.add(record);
+            }
+        }
+        return overdueRecords;
     }
     
     // Asynchronous operations using CompletableFuture
@@ -365,7 +432,25 @@ public class LibraryService {
         // - Find borrow record
         // - Calculate fine based on days overdue
         // - Return calculated fine amount
-        return 0.0;
+      if (recordId == null || recordId.trim().isEmpty()) {
+        throw new IllegalArgumentException("Record ID cannot be null or empty");
+      }
+
+      BorrowRecord record = database.getBorrowRecord(recordId);
+      if (record == null) {
+        throw new RuntimeException("Borrow record " + recordId + " not found");
+      }
+
+      // assume 1.0 per day fine
+      record.calculateFine(1.0);
+
+      // save new fine in dbase
+      boolean updated = database.updateBorrowRecord(record);
+      if (!updated) {
+        throw new RuntimeException("Failed to update fine in record " + recordId);
+      }
+
+      return record.getFineAmount();
     }
     
     public List<BorrowRecord> getBooksWithFines() {
@@ -373,7 +458,15 @@ public class LibraryService {
         // - Get all borrow records
         // - Filter records that have fines
         // - Return list of records with fines
-        return null;
+        List<BorrowRecord> allRecords = database.getAllBorrowRecords();
+        List<BorrowRecord> recordsWithFines = new ArrayList<>();
+        for (BorrowRecord record : allRecords) {
+          record.calculateFine(1.0); // ensure fine is up to date
+            if (record.getFineAmount() > 0.0) {
+                recordsWithFines.add(record);
+            }
+        }
+        return recordsWithFines;
     }
     
     // Statistics and reporting
@@ -392,5 +485,6 @@ public class LibraryService {
         // - Shutdown executor service
         // - Wait for running tasks to complete
         // - Handle shutdown gracefully
+        executorService.shutdown();
     }
 }
