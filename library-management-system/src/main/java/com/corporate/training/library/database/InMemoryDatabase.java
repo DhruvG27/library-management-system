@@ -77,8 +77,8 @@ public class InMemoryDatabase {
         if (book == null || book.getIsbn() == null || book.getIsbn().trim().isEmpty()) {
             throw new IllegalArgumentException("Book or ISBN cannot be null or empty");
         }
-        if (getBook(book.getIsbn()) != null) {
-            throw new IllegalArgumentException("Book with ISBN " + book.getIsbn() + " already exists");
+        if (getBookNoLock(book.getIsbn()) != null) {
+          throw new IllegalArgumentException("Book with ISBN " + book.getIsbn() + " already exists");
         }
 
         String sql = """
@@ -107,13 +107,11 @@ public class InMemoryDatabase {
       }
     }
 
-    public Book getBook(String isbn) throws SQLException {
+    private Book getBookNoLock(String isbn) {
         // TODO: Implement thread-safe book retrieval
         // - Acquire appropriate lock
         // - Return book by ISBN
         // - Release lock
-      booksLock.readLock().lock();
-      try {
         if (isbn == null || isbn.trim().isEmpty()) return null;
 
         String sql = """
@@ -133,9 +131,15 @@ public class InMemoryDatabase {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to get book", e);
         }
-      } finally {
-        booksLock.readLock().unlock();
-      }
+    }
+
+    public Book getBook(String isbn) throws SQLException {
+        booksLock.readLock().lock();
+        try {
+            return getBookNoLock(isbn);
+        } finally {
+            booksLock.readLock().unlock();
+        }
     }
 
     public Book getBookByTitle(String title) throws SQLException {
@@ -343,9 +347,9 @@ public class InMemoryDatabase {
             throw new IllegalArgumentException("Student or Student ID cannot be null or empty");
         }
 
-        Student existing = getStudent(student.getStudentId());
+        Student existing = getStudentNoLock(student.getStudentId());
         if (existing != null) {
-            throw new RuntimeException("Failed to add student as ID already exists: " + student.getStudentId());
+          throw new RuntimeException("Failed to add student as ID already exists: " + student.getStudentId());
         }
 
         String sql = """
@@ -376,13 +380,11 @@ public class InMemoryDatabase {
 
     }
 
-    public Student getStudent(String studentId) {
+    private Student getStudentNoLock(String studentId) {
         // TODO: Implement thread-safe student retrieval
         // - Acquire appropriate lock
         // - Return student by ID
         // - Release lock
-      studentsLock.readLock().lock();
-      try {
         if (studentId == null || studentId.trim().isEmpty()) {
             return null;
         }
@@ -404,6 +406,12 @@ public class InMemoryDatabase {
             throw new RuntimeException("Failed to get student", e);
         }
         return null;
+    }
+
+    public Student getStudent(String studentId) {
+      studentsLock.readLock().lock();
+      try {
+        return getStudentNoLock(studentId);
       } finally {
         studentsLock.readLock().unlock();
       }
@@ -578,9 +586,9 @@ public class InMemoryDatabase {
       if (record == null || record.getRecordId() == null || record.getRecordId().trim().isEmpty()) {
           throw new IllegalArgumentException("Borrow record or Record ID cannot be null or empty");
       }
-      if (getBorrowRecord(record.getRecordId()) != null) {
+        if (getBorrowRecordNoLock(record.getRecordId()) != null) {
           throw new IllegalArgumentException("Borrow record with ID " + record.getRecordId() + " already exists");
-      }
+        }
 
       String sql = """
         INSERT INTO PUBLIC.BORROW_RECORDS
@@ -627,13 +635,12 @@ public class InMemoryDatabase {
       }
     }
 
-    public BorrowRecord getBorrowRecord(String recordId) {
+    private BorrowRecord getBorrowRecordNoLock(String recordId) {
         // TODO: Implement thread-safe borrow record retrieval
         // - Acquire appropriate lock
         // - Return record by ID
         // - Release lock
-      borrowRecordsLock.readLock().lock();
-      try {
+
         if (recordId == null || recordId.trim().isEmpty()) {
             return null;
         }
@@ -654,6 +661,12 @@ public class InMemoryDatabase {
         throw new RuntimeException("Failed to get borrow record", e);
       }
       return null;
+    }
+
+    public BorrowRecord getBorrowRecord(String recordId) {
+      borrowRecordsLock.readLock().lock();
+      try {
+        return getBorrowRecordNoLock(recordId);
       } finally {
         borrowRecordsLock.readLock().unlock();
       }
@@ -843,9 +856,11 @@ public class InMemoryDatabase {
         // - Clear all collections
         // - Release all locks
         // Note: This method should be used only for testing
-      borrowRecordsLock.writeLock().lock();
-      studentsLock.writeLock().lock();
+
+
       booksLock.writeLock().lock();
+      studentsLock.writeLock().lock();
+      borrowRecordsLock.writeLock().lock();
       try {
         try (Connection conn = H2.getConnection();
              Statement stmt = conn.createStatement()) {
@@ -856,9 +871,9 @@ public class InMemoryDatabase {
             throw new RuntimeException("Failed to Clear Data", e);
         }
       } finally {
-        booksLock.writeLock().unlock();
-        studentsLock.writeLock().unlock();
         borrowRecordsLock.writeLock().unlock();
+        studentsLock.writeLock().unlock();
+        booksLock.writeLock().unlock();
       }
     }
 
